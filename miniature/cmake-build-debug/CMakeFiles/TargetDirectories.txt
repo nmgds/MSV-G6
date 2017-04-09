@@ -1,0 +1,3 @@
+/home/trixie/Desktop/OpenDaVinci/OpenDaVINCI/automotive/miniature/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/trixie/Desktop/OpenDaVinci/OpenDaVINCI/automotive/miniature/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/trixie/Desktop/OpenDaVinci/OpenDaVINCI/automotive/miniature/cmake-build-debug/CMakeFiles/miniature.dir
