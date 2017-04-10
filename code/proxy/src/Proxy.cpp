@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
+#include <stdint.h>
 #include <ctype.h>
 #include <cstring>
 #include <cmath>
@@ -28,19 +28,27 @@
 
 #include "OpenCVCamera.h"
 
+#include <opendavinci/odcore/wrapper/SerialPort.h>
+#include <opendavinci/odcore/wrapper/SerialPortFactory.h>
+
+
+#include "SerialReceiveBytes.h"
+
 #ifdef HAVE_UEYE
     #include "uEyeCamera.h"
 #endif
 
 #include "Proxy.h"
 
-namespace automotive {
-    namespace miniature {
-
+namespace code {
         using namespace std;
         using namespace odcore::base;
         using namespace odcore::data;
         using namespace odtools::recorder;
+
+        const string SEND_SERIAL_PORT = "/dev/pts/19"; //TODO ADD correct port
+        const string RECEIVE_SERIAL_PORT = "/dev/pts/20";
+        const uint32_t BAUD_RATE = 9600;
 
         Proxy::Proxy(const int32_t &argc, char **argv) :
             TimeTriggeredConferenceClientModule(argc, argv, "proxy"),
@@ -49,6 +57,34 @@ namespace automotive {
         {}
 
         Proxy::~Proxy() {
+        }
+
+        // Print message when data is received
+        void SerialReceiveBytes::nextString(const string &s) {
+            cout << "Received " << s.length() << " bytes containing '" << s << "'" << endl;
+
+            //Decode incoming traffic
+            /* 
+            Create variable of sensorBoardData type 
+            int data;
+            
+            // Infrared sensor 1 
+            data = s[1] << 8;
+            data = data + s[0];
+
+            sensorData.setIrs1(data);
+
+            // Infrared sensor 2
+            data = s[3] << 8;
+            data = data + s[2];
+
+            sensorData.setIrs1(data);
+          
+
+            */
+
+
+            //Store received data in shared memory
         }
 
         void Proxy::setUp() {
@@ -91,18 +127,40 @@ namespace automotive {
                 m_camera = unique_ptr<Camera>(new OpenCVCamera(NAME, ID, WIDTH, HEIGHT, BPP));
             }
             if (TYPE.compare("ueye") == 0) {
-#ifdef HAVE_UEYE
-                m_camera = unique_ptr<Camera>(new uEyeCamera(NAME, ID, WIDTH, HEIGHT, BPP));
-#endif
+                #ifdef HAVE_UEYE
+                    m_camera = unique_ptr<Camera>(new uEyeCamera(NAME, ID, WIDTH, HEIGHT, BPP));
+                #endif
             }
 
             if (m_camera.get() == NULL) {
                 cerr << "No valid camera type defined." << endl;
             }
+
+            // Create serial port
+            // We are using OpenDaVINCI's std::shared_ptr to automatically
+            // release any acquired resources.
+            try {
+                std::shared_ptr<SerialPort> serial(SerialPortFactory::createSerialPort(SEND_SERIAL_PORT, BAUD_RATE));
+                std::shared_ptr<SerialPort> serial(SerialPortFactory::createSerialPort(RECEIVE_SERIAL_PORT, BAUD_RATE));
+
+                // This instance will handle any bytes that are received
+                // from our serial port.
+                SerialReceiveBytes handler;
+                serial->setStringListener(&handler);
+
+                // Start receiving bytes.
+                serial->start();
+            }
+            catch(string &exception) {
+                cerr << "Serial port could not be created: " << exception << endl;
+            }
         }
 
         void Proxy::tearDown() {
             // This method will be call automatically _after_ return from body().
+            // Stop receiving bytes and unregister our handler.
+            serial->stop();
+            serial->setStringListener(NULL);
         }
 
         void Proxy::distribute(Container c) {
@@ -130,14 +188,17 @@ namespace automotive {
                     captureCounter++;
                 }
 
-                // Get sensor data from IR/US.
+                // Read vehicle control data from shared memory and send via serial link
+
+
+                //add delay to make loop run in 10hz
+                const uint32_t ONE_MILISECOND = 1000;
+                odcore::base::Thread::usleepFor(100 * ONE_MILISECOND);
             }
 
             cout << "Proxy: Captured " << captureCounter << " frames." << endl;
 
             return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
         }
-
-    }
-} // automotive::miniature
+} // code
 
