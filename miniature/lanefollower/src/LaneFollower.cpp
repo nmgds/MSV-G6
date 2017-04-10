@@ -120,7 +120,7 @@ namespace automotive {
             double e = 0;
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
-            const int32_t distance = 280;
+            const int32_t distance = 220;
 
             TimeStamp beforeImageProcessing;
             for(int32_t y = m_image->height - 8; y > m_image->height * .6; y -= 10) {
@@ -223,22 +223,29 @@ namespace automotive {
             else {
                 m_eSum += e;
             }
-         //   const double Kp = 2.5;
-         //   const double Ki = 8.5;
-         //   const double Kd = 0;
+            //const double Kp = 2.5;
+            //const double Ki = 8.5;
+//           const double Kd = 0;
 
             // The following values have been determined by Twiddle algorithm.
-          //  const double Kp = 0.4482626884328734;
-          //  const double Ki = 3.103197570937628;cmake
-         //   const double Kd = 0.030450210485408566;
-            
+			/*
+            const double Kp = 0.4482626884328734;
+            const double Ki = 3.103197570937628;
+            const double Kd = 0.030450210485408566;
+            */
           //  const double Kp = 1.193434;
           //  const double Ki = 0.090000;
           //  const double Kd = 0.160000;
           
-            const double Kp = 1.010;
+           // const double Kp = 0.440;
+           // const double Ki = 3.11;
+           // const double Kd = 0.003;
+		   
+		    const double Kp = 1.009;
             const double Ki = 0.0123123;
-            const double Kd = 0.0;
+			const double Kd = 0.00;
+
+
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;
@@ -285,28 +292,28 @@ namespace automotive {
             cvInitFont(&m_font, CV_FONT_HERSHEY_DUPLEX, hscale, vscale, shear, thickness, lineType);
 
             // Parameters for overtaking.
-            const int32_t ULTRASONIC_FRONT_CENTER = 3;
-            const int32_t ULTRASONIC_FRONT_RIGHT = 4;
-            const int32_t INFRARED_FRONT_RIGHT = 0;
-            const int32_t INFRARED_REAR_RIGHT = 2;
+            //const int32_t ULTRASONIC_FRONT_CENTER = 3;
+            //const int32_t ULTRASONIC_FRONT_RIGHT = 4;
+            //const int32_t INFRARED_FRONT_RIGHT = 0;
+            //const int32_t INFRARED_REAR_RIGHT = 2;
 
-            const double OVERTAKING_DISTANCE = 5.5;
-            const double HEADING_PARALLEL = 0.04;
+            //const double OVERTAKING_DISTANCE = 5.5;
+            //const double HEADING_PARALLEL = 0.04;
 
             // Overall state machines for moving and measuring.
             enum StateMachineMoving { FORWARD, TO_LEFT_LANE_LEFT_TURN, TO_LEFT_LANE_RIGHT_TURN, CONTINUE_ON_LEFT_LANE, TO_RIGHT_LANE_RIGHT_TURN, TO_RIGHT_LANE_LEFT_TURN };
             enum StateMachineMeasuring { DISABLE, FIND_OBJECT_INIT, FIND_OBJECT, FIND_OBJECT_PLAUSIBLE, HAVE_BOTH_IR, HAVE_BOTH_IR_SAME_DISTANCE, END_OF_OBJECT };
 
-            StateMachineMoving stageMoving = FORWARD;
-            StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
+            //StateMachineMoving stageMoving = FORWARD;
+            //StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
 
             // State counter for dynamically moving back to right lane.
-            int32_t stageToRightLaneRightTurn = 0;
-            int32_t stageToRightLaneLeftTurn = 0;
+            //int32_t stageToRightLaneRightTurn = 0;
+            //int32_t stageToRightLaneLeftTurn = 0;
 
             // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
-            double distanceToObstacle = 0;
-            double distanceToObstacleOld = 0;
+            //double distanceToObstacle = 0;
+            //double distanceToObstacleOld = 0;
 
             // Overall state machine handler.
 	        while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
@@ -325,7 +332,7 @@ namespace automotive {
 			        processImage();
 		        }
 
-
+/*
                 // Overtaking part.
                 {
 	                // 1. Get most recent vehicle data:
@@ -463,6 +470,7 @@ namespace automotive {
                         }
                     }
                 }
+				 * */
 
                 // Create container for finally sending the set values for the control algorithm.
                 Container c2(m_vehicleControl);
