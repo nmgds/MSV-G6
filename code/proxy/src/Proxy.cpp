@@ -46,8 +46,8 @@ namespace code {
         using namespace odcore::data;
         using namespace odtools::recorder;
 
-        const string SEND_SERIAL_PORT = "/dev/pts/19"; //TODO ADD correct port
-        const string RECEIVE_SERIAL_PORT = "/dev/pts/20";
+        const string SEND_SERIAL_PORT = "/dev/ttyACM0"; 
+        const string RECEIVE_SERIAL_PORT = "/dev/ttyACM0";
         const uint32_t BAUD_RATE = 9600;
 
         Proxy::Proxy(const int32_t &argc, char **argv) :
