@@ -22,6 +22,7 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <bitset>
 
 #include "opendavinci/odcore/base/KeyValueConfiguration.h"
 #include "opendavinci/odcore/data/Container.h"
@@ -124,29 +125,59 @@ namespace automotive {
             // Share data.
             getConference().send(c);
         }
+		
+		string Proxy::makeSteeringCommand(int steering){
+				uint8_t payload = 0x0;
+				uint8_t steerMask = 0x80;
+				uint8_t positiveMask = 0x20;
+				string convertedPayload;
+
+				//set the first bit because it is a steering command
+				payload = payload | steerMask;
+				//set bit 5 because it is a positive number
+				if(steering>0){
+					payload = payload | positiveMask;
+				}
+				else{
+					//number is negative and needs to be adjuested
+					steering = 0 - steering;
+				}
+
+				//set the last couple of bits with the steering angle
+				payload = payload | steering;
+				
+				//convert to a string to send through the serial
+				convertedPayload = string(1, payload);
+				return convertedPayload;
+			
+			
+		}
 
         // This method will do the main data processing job.
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode Proxy::body() {
             uint32_t captureCounter = 0;
-			
-			
-			
-			
 
-            try {
+            try {			
                 std::shared_ptr<SerialPort> serial(SerialPortFactory::createSerialPort(SEND_SERIAL_PORT, BAUD_RATE));
-				serial->send("Hello car!");
-            }
-            catch(string &exception) {
-                cerr << "Serial port could not be created: " << exception << endl;
-            }
+
+			cout<<"Serial port created."<<endl;
 			
-			
-			
-			
-			
+			//arbitrary delay
+			for(int i=0; i<140000;i++){
+				for(int k=0; k<10000; k++){
+					//wait until starting to send data
+				}
+			}
+
             while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
+
+				
+				
+				
+				
+				 
                 // Capture frame.
+				
                 if (m_camera.get() != NULL) {
                     odcore::data::image::SharedImage si = m_camera->capture();
 
@@ -154,11 +185,19 @@ namespace automotive {
                     distribute(c);
                     captureCounter++;
                 }
+				 
 
                 // Get sensor data from IR/US.
             }
+			
 
             cout << "Proxy: Captured " << captureCounter << " frames." << endl;
+			
+				
+            }
+            catch(string &exception) {
+                cerr << "Serial port could not be created: " << exception << endl;
+            }
 
             return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
         }

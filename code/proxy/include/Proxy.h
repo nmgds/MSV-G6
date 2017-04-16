@@ -22,6 +22,7 @@
 
 #include <map>
 #include <memory>
+#include <cstring>
 
 #include "opendavinci/odcore/base/module/TimeTriggeredConferenceClientModule.h"
 #include "opendavinci/odcore/data/Container.h"
@@ -77,6 +78,8 @@ namespace automotive {
                 virtual void tearDown();
 
                 void distribute(odcore::data::Container c);
+
+		string makeSteeringCommand(int steering);
 
             private:
                 unique_ptr<odtools::recorder::Recorder> m_recorder;
