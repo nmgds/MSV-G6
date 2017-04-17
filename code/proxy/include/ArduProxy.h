@@ -17,12 +17,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef OPENCVCAMERA_H_
-#define OPENCVCAMERA_H_
+#ifndef ARDU_PROXY_H_
+#define ARDU_PROXY_H_
 
-#include "opencv2/highgui/highgui.hpp"
+#include <map>
+#include <memory>
+#include <cstring>
 
-#include "Camera.h"
+#include "opendavinci/odcore/base/module/TimeTriggeredConferenceClientModule.h"
+#include "opendavinci/odcore/data/Container.h"
+#include "opendavinci/odtools/recorder/Recorder.h"
+
 
 namespace automotive {
     namespace miniature {
@@ -30,9 +35,9 @@ namespace automotive {
         using namespace std;
 
         /**
-         * This class wraps an OpenCV camera and captures its data into a shared memory segment.
+         * This class wraps the software/hardware interface board.
          */
-        class OpenCVCamera : public Camera {
+        class ArduProxy : public odcore::base::module::TimeTriggeredConferenceClientModule {
             private:
                 /**
                  * "Forbidden" copy constructor. Goal: The compiler should warn
@@ -41,7 +46,7 @@ namespace automotive {
                  *
                  * @param obj Reference to an object of this class.
                  */
-                OpenCVCamera(const OpenCVCamera &/*obj*/);
+                ArduProxy(const ArduProxy &/*obj*/);
 
                 /**
                  * "Forbidden" assignment operator. Goal: The compiler should warn
@@ -51,35 +56,34 @@ namespace automotive {
                  * @param obj Reference to an object of this class.
                  * @return Reference to this instance.
                  */
-                OpenCVCamera& operator=(const OpenCVCamera &/*obj*/);
+                ArduProxy& operator=(const ArduProxy &/*obj*/);
 
             public:
                 /**
                  * Constructor.
                  *
-                 * @param name Name of the shared memory segment.
-                 * @param id OpenCVCamera identifier.
-                 * @param width
-                 * @param height
-                 * @param bpp
+                 * @param argc Number of command line arguments.
+                 * @param argv Command line arguments.
                  */
-                OpenCVCamera(const string &name, const uint32_t &id, const uint32_t &width, const uint32_t &height, const uint32_t &bpp);
+                ArduProxy(const int32_t &argc, char **argv);
 
-                virtual ~OpenCVCamera();
+                virtual ~ArduProxy();
 
-            private:
-                virtual bool copyImageTo(char *dest, const uint32_t &size);
-
-                virtual bool isValid() const;
-
-                virtual bool captureFrame();
+                odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode body();
 
             private:
-                CvCapture *m_capture;
-                IplImage *m_image;
+                virtual void setUp();
+
+                virtual void tearDown();
+
+                void distribute(odcore::data::Container c);
+
+		string makeSteeringCommand(int steering);
+        string makeMovingCommand (int moving);
+
         };
 
     }
 } // automotive::miniature
 
-#endif /*OPENCVCAMERA_H_*/
+#endif /*PROXY_H_*/
