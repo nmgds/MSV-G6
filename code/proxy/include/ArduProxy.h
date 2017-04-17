@@ -17,8 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef PROXY_H_
-#define PROXY_H_
+#ifndef ARDU_PROXY_H_
+#define ARDU_PROXY_H_
 
 #include <map>
 #include <memory>
@@ -28,7 +28,6 @@
 #include "opendavinci/odcore/data/Container.h"
 #include "opendavinci/odtools/recorder/Recorder.h"
 
-#include "Camera.h"
 
 namespace automotive {
     namespace miniature {
@@ -38,7 +37,7 @@ namespace automotive {
         /**
          * This class wraps the software/hardware interface board.
          */
-        class Proxy : public odcore::base::module::TimeTriggeredConferenceClientModule {
+        class ArduProxy : public odcore::base::module::TimeTriggeredConferenceClientModule {
             private:
                 /**
                  * "Forbidden" copy constructor. Goal: The compiler should warn
@@ -47,7 +46,7 @@ namespace automotive {
                  *
                  * @param obj Reference to an object of this class.
                  */
-                Proxy(const Proxy &/*obj*/);
+                ArduProxy(const ArduProxy &/*obj*/);
 
                 /**
                  * "Forbidden" assignment operator. Goal: The compiler should warn
@@ -57,7 +56,7 @@ namespace automotive {
                  * @param obj Reference to an object of this class.
                  * @return Reference to this instance.
                  */
-                Proxy& operator=(const Proxy &/*obj*/);
+                ArduProxy& operator=(const ArduProxy &/*obj*/);
 
             public:
                 /**
@@ -66,9 +65,9 @@ namespace automotive {
                  * @param argc Number of command line arguments.
                  * @param argv Command line arguments.
                  */
-                Proxy(const int32_t &argc, char **argv);
+                ArduProxy(const int32_t &argc, char **argv);
 
-                virtual ~Proxy();
+                virtual ~ArduProxy();
 
                 odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode body();
 
@@ -77,13 +76,12 @@ namespace automotive {
 
                 virtual void tearDown();
 
+		virtual void nextContainer(odcore::data::Container &c);
+
                 void distribute(odcore::data::Container c);
 
 		string makeSteeringCommand(int steering);
 
-            private:
-                unique_ptr<odtools::recorder::Recorder> m_recorder;
-                unique_ptr<Camera> m_camera;
         };
 
     }

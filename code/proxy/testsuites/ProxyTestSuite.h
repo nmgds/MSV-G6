@@ -17,13 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef ProxyTESTSUITE_H_
-#define ProxyTESTSUITE_H_
+#ifndef ARDUPROXYTESTSUITE_H_
+#define ARDUPROXYTESTSUITE_H_
 
 #include "cxxtest/TestSuite.h"
 
 // Include local header files.
-#include "../include/Proxy.h"
+#include "../include/ArduProxy.h"
 
 using namespace std;
 using namespace odcore::data;
@@ -32,23 +32,23 @@ using namespace automotive::miniature;
 /**
  * This class derives from SensorBoard to allow access to protected methods.
  */
-class ProxyTestling : public Proxy {
+class ArduProxyTestling : public ArduProxy {
     private:
-        ProxyTestling();
+        ArduProxyTestling();
     
     public:
-        ProxyTestling(const int32_t &argc, char **argv) :
-            Proxy(argc, argv) {}
+        ArduProxyTestling(const int32_t &argc, char **argv) :
+            ArduProxy(argc, argv) {}
 
-        // Here, you need to add all methods which are protected in Proxy and which are needed for the test cases.
+        // Here, you need to add all methods which are protected in ArduProxy and which are needed for the test cases.
 };
 
 /**
  * The actual testsuite starts here.
  */
-class ProxyTest : public CxxTest::TestSuite {
+class ArduProxyTest : public CxxTest::TestSuite {
     private:
-        ProxyTestling *dt;
+        ArduProxyTestling *dt;
 
     public:
         /**
@@ -65,7 +65,7 @@ class ProxyTest : public CxxTest::TestSuite {
             argv[1] = const_cast<char*>(argv1.c_str());
 
             // Create an instance of sensorboard through SensorBoardTestling which will be deleted in tearDown().
-            dt = new ProxyTestling(argc, argv);
+            dt = new ArduProxyTestling(argc, argv);
         }
 
         /**
@@ -80,7 +80,7 @@ class ProxyTest : public CxxTest::TestSuite {
         // Below this line the actual testcases are defined.
         ////////////////////////////////////////////////////////////////////////////////////
 
-        void testProxySuccessfullyCreated() {
+        void testArduProxySuccessfullyCreated() {
             TS_ASSERT(dt != NULL);
         }
 
@@ -95,7 +95,7 @@ class ProxyTest : public CxxTest::TestSuite {
         /**
          * This constructor is only necessary to initialize the pointer variable.
          */
-        ProxyTest() : dt(NULL) {}
+        ArduProxyTest() : dt(NULL) {}
 
     private:
         /**
@@ -105,7 +105,7 @@ class ProxyTest : public CxxTest::TestSuite {
          *
          * @param obj Reference to an object of this class.
          */
-        ProxyTest(const ProxyTest &/*obj*/);
+        ArduProxyTest(const ArduProxyTest &/*obj*/);
 
         /**
          * "Forbidden" assignment operator. Goal: The compiler should warn
@@ -115,9 +115,9 @@ class ProxyTest : public CxxTest::TestSuite {
          * @param obj Reference to an object of this class.
          * @return Reference to this instance.
          */
-        ProxyTest& operator=(const ProxyTest &/*obj*/);
+        ArduProxyTest& operator=(const ArduProxyTest &/*obj*/);
 
 };
 
-#endif /*ProxyTESTSUITE_H_*/
+#endif /*ArduProxyTESTSUITE_H_*/
 
