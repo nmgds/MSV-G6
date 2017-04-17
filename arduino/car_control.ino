@@ -17,6 +17,19 @@ int rcControllerFlag;
 int steer;
 int drive;
 String input;
+
+
+  byte mask = 31; // mask for 0001 1111
+  int steerValue = 60;
+  byte steeringAmount;
+  int speedValue = 1500;
+  byte speedAmount;
+
+  int currentSteering = steerValue;
+  int currentSpeed = speedValue;
+
+
+
 void setup() {
   // put your setup code here, to run once:
   steering.attach(servoPin);
@@ -28,9 +41,9 @@ void setup() {
   ultrasoundSide.attach(ULTRA_SIDE_PIN);
   ultrasoundFront.attach(ULTRA_FRONT_PIN);
   steering.write(60);
-  motors.write(1500);
+  motors.writeMicroseconds(1500);
   attachInterrupt(digitalPinToInterrupt(3), rcControllerInterrupt, RISING);
-  Serial.begin(9600);
+  Serial.begin(38400);
 }
 void loop() {
   // put your main code here, to run repeatedly:
@@ -39,19 +52,18 @@ void loop() {
   drive = pulseIn(escPinRC, HIGH);
 
   if (steer == 0)
-  {
-    steering.write(60);
-    motors.write(1500);
+  {    
+    steering.write(currentSteering);
+    motors.writeMicroseconds(currentSpeed);
+    
     if(Serial.available() > 0){
       byte cmd = (byte)Serial.read();
-      
       if(bitRead(cmd, 7) == 1){
           steerCar(cmd);
       }
       else{
         moveCar(cmd);
       }
-      
     }
   }
   else {
@@ -67,9 +79,7 @@ void checkRC() {
 
 void steerCar(byte command){
 
-  byte mask = 31; // mask for 0001 1111
-  int steerValue = 60;
-  byte steeringAmount;
+  steerValue = 60;
   steeringAmount = command & mask;
 
   if (steeringAmount > 30){
@@ -84,13 +94,12 @@ void steerCar(byte command){
     steerValue = steerValue - steeringAmount;
     
   }
-  steering.write(steerValue);
+  currentSteering = steerValue;
 }
 
 void moveCar(byte command){
- byte mask = 31; // mask for 0001 1111
-  int speedValue = 1500;
-  byte speedAmount;
+
+  speedValue = 1500;
   speedAmount = command & mask;
 
   if(bitRead(command, 5) == 1){ //positive value
@@ -106,7 +115,7 @@ void moveCar(byte command){
     speedValue = speedValue - (speedAmount * 10);
     
   }
-   motors.writeMicroseconds(speedValue);
+  currentSpeed = speedValue;
 }
 
 
