@@ -154,7 +154,7 @@ namespace automotive {
 			cout<<"Steering:" << desired_steering<<endl;
 			//cout<<"Speed:"<<desired_speed<<endl;
 			
-			if(counter == 25){
+			if(counter == 23){
 				average_steering = average_steering / counter;
 				//send data to the serial
 				serial->send(makeSteeringCommand(average_steering));
@@ -166,9 +166,6 @@ namespace automotive {
 				counter++;
 				average_steering = average_steering + desired_steering;
 			}
-			
-			
-			serial->send(makeSteeringCommand(average_steering));
 
 
 			//serial->send(makeMovingCommand(desired_speed));
