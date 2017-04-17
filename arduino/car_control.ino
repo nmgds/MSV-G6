@@ -44,15 +44,14 @@ void loop() {
     motors.write(1500);
     if(Serial.available() > 0){
       byte cmd = (byte)Serial.read();
-      steerCar(cmd);
-      /*
+      
       if(bitRead(cmd, 7) == 1){
           steerCar(cmd);
       }
       else{
         moveCar(cmd);
       }
-      */
+      
     }
   }
   else {
@@ -73,6 +72,10 @@ void steerCar(byte command){
   byte steeringAmount;
   steeringAmount = command & mask;
 
+  if (steeringAmount > 30){
+    steeringAmount = 30;
+  }
+
   if(bitRead(command, 5) == 1){ //positive value
     steerValue = steerValue + steeringAmount;
     
@@ -85,8 +88,25 @@ void steerCar(byte command){
 }
 
 void moveCar(byte command){
+ byte mask = 31; // mask for 0001 1111
+  int speedValue = 1500;
+  byte speedAmount;
+  speedAmount = command & mask;
 
-  
+  if(bitRead(command, 5) == 1){ //positive value
+    if (speedAmount > 13){
+      speedAmount = 13;
+    }
+     speedValue = speedValue + (speedAmount * 10);
+  }
+  else{ //negative value
+    if(speedAmount > 30){
+      speedAmount = 30;
+    }
+    speedValue = speedValue - (speedAmount * 10);
+    
+  }
+   motors.writeMicroseconds(speedValue);
 }
 
 
@@ -119,15 +139,19 @@ void remoteControl() {
     steering.write(30);
   }
 
+  // The car moves backward
   if (drive < 1200) {
+    //
     motors.writeMicroseconds(1105);
   }
   else if (drive < 1300) {
     motors.writeMicroseconds(1250);
   }
+  // The car moves forward
   else if (drive > 1600) {
     motors.writeMicroseconds(1630);
   }
+    // the car does not drive
   else {
     motors.writeMicroseconds(1500);
   }
