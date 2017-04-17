@@ -81,6 +81,7 @@ namespace automotive {
                 void distribute(odcore::data::Container c);
 
 		string makeSteeringCommand(int steering);
+        string makeMovingCommand (int moving);
 
         };
 

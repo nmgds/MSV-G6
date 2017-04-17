@@ -105,6 +105,28 @@ namespace automotive {
 			
 			
 		}
+		string ArduProxy::makeMovingCommand(int moving){
+			uint8_t payload = 0x0;
+				uint8_t positiveMask = 0x20;
+				string convertedPayload;
+
+				//set bit 5 because it is a positive number
+				if(moving>0){
+					payload = payload | positiveMask;
+				}
+				else{
+					//number is negative and needs to be adjuested
+					moving = 0 - moving;
+				}
+
+				//set the last couple of bits with the moving speed
+				payload = payload | moving;
+				
+				//convert to a string to send through the serial
+				convertedPayload = string(1, payload);
+				return convertedPayload;
+		}
+
 
         // This method will do the main data processing job.
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode ArduProxy::body() {
