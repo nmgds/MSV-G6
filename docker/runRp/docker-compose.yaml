@@ -6,7 +6,7 @@ services:
     image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base-armhf
     network_mode: host
     volumes:
-      - ./configuration:/opt/configuration
+      - ../configuration:/opt/configuration
     command: "/opt/od4/bin/odsupercomponent
       --cid=111
       --verbose=1
