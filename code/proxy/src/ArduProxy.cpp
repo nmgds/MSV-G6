@@ -138,7 +138,7 @@ namespace automotive {
 			
 			//delay for the serial to connect
 			const uint32_t ONE_SECOND = 1000 * 1000;
-			odcore::base::Thread::usleepFor(5*ONE_SECOND);
+			odcore::base::Thread::usleepFor(1*ONE_SECOND);
 			
 			
 
@@ -149,16 +149,16 @@ namespace automotive {
 			automotive::VehicleControl vc = c.getData<VehicleControl>();
 			
 			steeringValue = vc.getSteeringWheelAngle();
-			desired_steering= (int)floor(steeringValue*30);
+			desired_steering= (int)floor(steeringValue*-150);
 			//desired_speed = vc.getSpeed();
 			cout<<"Steering:" << desired_steering<<endl;
 			//cout<<"Speed:"<<desired_speed<<endl;
 			
-			if(counter == 5){
+			if(counter == 25){
 				average_steering = average_steering / counter;
 				//send data to the serial
 				serial->send(makeSteeringCommand(average_steering));
-				cout<<" :Average steering:"<<average_steering<<endl;
+				//cout<<" :Average steering:"<<average_steering<<endl;
 				average_steering = 0;
 				counter = 0;
 			}
