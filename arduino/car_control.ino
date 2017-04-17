@@ -38,13 +38,22 @@ void loop() {
   steer = pulseIn(steerPinRC, HIGH);
   drive = pulseIn(escPinRC, HIGH);
 
-
-
   if (steer == 0)
   {
     steering.write(60);
     motors.write(1500);
-
+    if(Serial.available() > 0){
+      byte cmd = (byte)Serial.read();
+      steerCar(cmd);
+      /*
+      if(bitRead(cmd, 7) == 1){
+          steerCar(cmd);
+      }
+      else{
+        moveCar(cmd);
+      }
+      */
+    }
   }
   else {
     remoteControl();
@@ -56,6 +65,32 @@ void checkRC() {
   Serial.println(pulseIn(steerPinRC, HIGH, 25000));
 
 }
+
+void steerCar(byte command){
+
+  byte mask = 31; // mask for 0001 1111
+  int steerValue = 60;
+  byte steeringAmount;
+  steeringAmount = command & mask;
+
+  if(bitRead(command, 5) == 1){ //positive value
+    steerValue = steerValue + steeringAmount;
+    
+  }
+  else{ //negative value
+    steerValue = steerValue - steeringAmount;
+    
+  }
+  steering.write(steerValue);
+}
+
+void moveCar(byte command){
+
+  
+}
+
+
+
 void rcControllerInterrupt() {
   rcControllerFlag = 1;
 }
@@ -98,6 +133,5 @@ void remoteControl() {
   }
 
 }
-
 
 
