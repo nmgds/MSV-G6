@@ -28,6 +28,7 @@
 #include "opendavinci/odcore/data/Container.h"
 #include "opendavinci/odcore/data/TimeStamp.h"
 #include <opendavinci/odcore/wrapper/SerialPort.h>
+#include <opendavinci/odcore/base/Thread.h>
 #include <opendavinci/odcore/wrapper/SerialPortFactory.h>
 #include "automotivedata/generated/automotive/VehicleData.h"
 
@@ -46,9 +47,13 @@ namespace automotive {
 		
 		const string SEND_SERIAL_PORT = "/dev/ttyACM0"; 
         const string RECEIVE_SERIAL_PORT = "/dev/ttyACM0";
-        const uint32_t BAUD_RATE = 9600;
+        const uint32_t BAUD_RATE = 38400;
 		
 		int desired_steering = 0;
+		int desired_speed = 2;
+		
+		int counter = 0;
+		int average_steering = 0;
 
         ArduProxy::ArduProxy(const int32_t &argc, char **argv) :
             TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy")
@@ -69,15 +74,6 @@ namespace automotive {
         void ArduProxy::tearDown() {
             // This method will be call automatically _after_ return from body().
         }
-		
-		void ArduProxy::nextContainer(odcore::data::Container &c){
-			cout<<c.getDataType()<<endl;
-			//if(c.getDataType() == VehicleControl::ID){
-				automotive::VehicleControl vc = c.getData<VehicleControl>();
-				desired_steering = vc.getSteeringWheelAngle();				
-			//}
-			
-		}
 		
 		string ArduProxy::makeSteeringCommand(int steering){
 				uint8_t payload = 0x0;
@@ -132,19 +128,52 @@ namespace automotive {
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode ArduProxy::body() {
            
 
+			KeyValueDataStore &kvs = getKeyValueDataStore();
+			
+			
             try {			
                 std::shared_ptr<SerialPort> serial(SerialPortFactory::createSerialPort(SEND_SERIAL_PORT, BAUD_RATE));
 
 			cout<<"Serial port created."<<endl;
 			
-			//arbitrary delay
-			for(int i=0; i<140000;i++){
-				for(int k=0; k<10000; k++){
-					//wait until starting to send data
-				}
-			}			
+			//delay for the serial to connect
+			const uint32_t ONE_SECOND = 1000 * 1000;
+			odcore::base::Thread::usleepFor(5*ONE_SECOND);
 			
-				
+			
+
+		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
+			
+			Container c = kvs.get(automotive::VehicleControl::ID());
+			double steeringValue;
+			automotive::VehicleControl vc = c.getData<VehicleControl>();
+			
+			steeringValue = vc.getSteeringWheelAngle();
+			desired_steering= (int)floor(steeringValue*30);
+			//desired_speed = vc.getSpeed();
+			cout<<"Steering:" << desired_steering<<endl;
+			//cout<<"Speed:"<<desired_speed<<endl;
+			
+			if(counter == 5){
+				average_steering = average_steering / counter;
+				//send data to the serial
+				serial->send(makeSteeringCommand(average_steering));
+				cout<<" :Average steering:"<<average_steering<<endl;
+				average_steering = 0;
+				counter = 0;
+			}
+			else{
+				counter++;
+				average_steering = average_steering + desired_steering;
+			}
+			
+			
+			serial->send(makeSteeringCommand(average_steering));
+
+
+			//serial->send(makeMovingCommand(desired_speed));
+		}			
+			
             }
             catch(string &exception) {
                 cerr << "Serial port could not be created: " << exception << endl;

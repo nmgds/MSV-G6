@@ -76,8 +76,6 @@ namespace automotive {
 
                 virtual void tearDown();
 
-		virtual void nextContainer(odcore::data::Container &c);
-
                 void distribute(odcore::data::Container c);
 
 		string makeSteeringCommand(int steering);
