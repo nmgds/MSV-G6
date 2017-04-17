@@ -50,7 +50,7 @@ namespace automotive {
         const uint32_t BAUD_RATE = 38400;
 		
 		int desired_steering = 0;
-		int desired_speed = 2;
+		int desired_speed = 8;
 		
 		int counter = 0;
 		int average_steering = 0;
@@ -140,7 +140,8 @@ namespace automotive {
 			const uint32_t ONE_SECOND = 1000 * 1000;
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);
 			
-			
+			serial->send(makeMovingCommand(desired_speed));
+			odcore::base::Thread::usleepFor(1*ONE_SECOND);			
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
 			
@@ -149,16 +150,16 @@ namespace automotive {
 			automotive::VehicleControl vc = c.getData<VehicleControl>();
 			
 			steeringValue = vc.getSteeringWheelAngle();
-			desired_steering= (int)floor(steeringValue*-150);
+			desired_steering= (int)floor(steeringValue*-200);
 			//desired_speed = vc.getSpeed();
 			cout<<"Steering:" << desired_steering<<endl;
 			//cout<<"Speed:"<<desired_speed<<endl;
 			
-			if(counter == 23){
+			if(counter == 10){
 				average_steering = average_steering / counter;
 				//send data to the serial
 				serial->send(makeSteeringCommand(average_steering));
-				//cout<<" :Average steering:"<<average_steering<<endl;
+				cout<<"    :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
 				average_steering = 0;
 				counter = 0;
 			}
@@ -168,13 +169,16 @@ namespace automotive {
 			}
 
 
-			//serial->send(makeMovingCommand(desired_speed));
-		}			
+			
+		}
+	serial->send(makeMovingCommand(0));			
 			
             }
             catch(string &exception) {
                 cerr << "Serial port could not be created: " << exception << endl;
             }
+
+		
 
             return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
         }
