@@ -3,7 +3,7 @@ version: '2'
 services:
   # odsupercomponent
   odsupercomponent:
-    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base-armhf
+    image: navysealswithac/scaledcars-rpi
     network_mode: host
     volumes:
       - ../configuration:/opt/configuration
@@ -14,7 +14,7 @@ services:
 
   # proxy-camera
   proxy-camera:
-    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base-armhf
+    image: navysealswithac/scaledcars-rpi
     group_add:
       - video
     depends_on:
@@ -30,14 +30,14 @@ services:
 
   # lanefollower
   lanefollower:
-    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base-armhf
+    image: navysealswithac/scaledcars-rpi
     depends_on:
       - odsupercomponent
       - proxy-camera
     user: odv
     network_mode: host
     ipc: host
-    command: "/opt/opendlv.scaledcars/bin/miniature/lanefollower 
+    command: "/opt/od4/bin/miniature/lanefollower 
     --cid=111
     --freq=10
     --verbose=1"

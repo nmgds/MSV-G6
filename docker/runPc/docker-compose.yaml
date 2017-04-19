@@ -37,7 +37,7 @@ services:
     user: odv
     network_mode: host
     ipc: host
-    command: "/opt/opendlv.scaledcars/bin/miniature/lanefollower 
+    command: "/opt/od4/bin/miniature/lanefollower 
     --cid=111
     --freq=10
     --verbose=1"
