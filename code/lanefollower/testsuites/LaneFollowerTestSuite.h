@@ -149,6 +149,7 @@ class LaneFollowerTest : public CxxTest::TestSuite {
 
             TS_ASSERT(ldt->callReadSharedImage(c) == false);
         }
+        
 
         ////////////////////////////////////////////////////////////////////////////////////
         // Below this line the necessary constructor for initializing the pointer variables,

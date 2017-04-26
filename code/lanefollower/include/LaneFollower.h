@@ -85,6 +85,7 @@ namespace automotive {
 	            bool m_hasAttachedToSharedImageMemory;
 	            std::shared_ptr<odcore::wrapper::SharedMemory> m_sharedImageMemory;
 	            IplImage *m_image;
+	            IplImage *gray;
                 bool m_debug;
                 CvFont m_font;
 

@@ -21,6 +21,8 @@
 
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/opencv.hpp>
 
 #include "opendavinci/odcore/base/KeyValueConfiguration.h"
 #include "opendavinci/odcore/base/Lock.h"
@@ -43,10 +45,14 @@ namespace automotive {
         using namespace automotive;
         using namespace automotive::miniature;
 
+		using namespace cv;
+
+
         LaneFollower::LaneFollower(const int32_t &argc, char **argv) : TimeTriggeredConferenceClientModule(argc, argv, "lanefollower"),
             m_hasAttachedToSharedImageMemory(false),
             m_sharedImageMemory(),
             m_image(NULL),
+            gray(NULL),
             m_debug(false),
             m_font(),
             m_previousTime(),
@@ -67,8 +73,8 @@ namespace automotive {
 
         void LaneFollower::tearDown() {
 	        // This method will be call automatically _after_ return from body().
-	        if (m_image != NULL) {
-		        cvReleaseImage(&m_image);
+	        if (gray != NULL) {
+		        cvReleaseImage(&gray);
 	        }
 
 	        if (m_debug) {
@@ -97,17 +103,26 @@ namespace automotive {
 			        // For example, simply show the image.
 			        if (m_image == NULL) {
 				        m_image = cvCreateImage(cvSize(si.getWidth(), si.getHeight()), IPL_DEPTH_8U, numberOfChannels);
+				        gray = cvCreateImage(cvSize(m_image->width, m_image->height), IPL_DEPTH_8U, 1);
+				        
 			        }
 
 			        // Copying the image data is very expensive...
+			        
 			        if (m_image != NULL) {
 				        memcpy(m_image->imageData,
 						       m_sharedImageMemory->getSharedMemory(),
 						       si.getWidth() * si.getHeight() * numberOfChannels);
+						       
+						       // Converting m_image to gray scale
+						       if (m_image != NULL && gray != NULL){
+						       cvCvtColor(m_image, gray, CV_RGB2GRAY);
+						   }
 			        }
 
 			        // Mirror the image.
-			        cvFlip(m_image, 0, -1);
+			        cvFlip(gray, 0, -1);
+
 
 			        retVal = true;
 		        }
@@ -123,15 +138,15 @@ namespace automotive {
             const int32_t distance = 220;
 
             TimeStamp beforeImageProcessing;
-            for(int32_t y = m_image->height - 8; y > m_image->height * .6; y -= 10) {
+            for(int32_t y = gray->height - 8; y > gray->height * .6; y -= 10) {
                 
                 // Search from middle to the right:
                 CvScalar pixelRight;
                 CvPoint right;
                 right.y = y;
                 right.x = -1;
-                for(int x = m_image->width/2; x < m_image->width; x++) {
-		            pixelRight = cvGet2D(m_image, y, x);
+                for(int x = gray->width/2; x < gray->width; x++) {
+		            pixelRight = cvGet2D(gray, y, x);
 		            if (pixelRight.val[0] >= 200) {
                         right.x = x;
                         break;
@@ -143,8 +158,8 @@ namespace automotive {
                 CvPoint left;
                 left.y = y;
                 left.x = -1;
-                for(int x = m_image->width/2; x > 0; x--) {
-		            pixelLeft = cvGet2D(m_image, y, x);
+                for(int x = gray->width/2; x > 0; x--) {
+		            pixelLeft = cvGet2D(gray, y, x);
 		            if (pixelLeft.val[0] >= 200) {
                         left.x = x;
                         break;
@@ -155,19 +170,19 @@ namespace automotive {
                 if (m_debug) {
                     if (left.x > 0) {
                     	CvScalar green = CV_RGB(0, 255, 0);
-                    	cvLine(m_image, cvPoint(m_image->width/2, y), left, green, 1, 8);
+                    	cvLine(gray, cvPoint(gray->width/2, y), left, green, 1, 8);
 
                         stringstream sstr;
-                        sstr << (m_image->width/2 - left.x);
-                    	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 - 100, y - 2), &m_font, green);
+                        sstr << (gray->width/2 - left.x);
+                    	cvPutText(gray, sstr.str().c_str(), cvPoint(gray->width/2 - 100, y - 2), &m_font, green);
                     }
                     if (right.x > 0) {
                     	CvScalar red = CV_RGB(255, 0, 0);
-                    	cvLine(m_image, cvPoint(m_image->width/2, y), right, red, 1, 8);
+                    	cvLine(gray, cvPoint(gray->width/2, y), right, red, 1, 8);
 
                         stringstream sstr;
-                        sstr << (right.x - m_image->width/2);
-                    	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 + 100, y - 2), &m_font, red);
+                        sstr << (right.x - gray->width/2);
+                    	cvPutText(gray, sstr.str().c_str(), cvPoint(gray->width/2 + 100, y - 2), &m_font, red);
                     }
                 }
 
@@ -180,7 +195,7 @@ namespace automotive {
                             m_eOld = 0;
                         }
                         
-                        e = ((right.x - m_image->width/2.0) - distance)/distance;
+                        e = ((right.x - gray->width/2.0) - distance)/distance;
 
                         useRightLaneMarking = true;
                     }
@@ -190,7 +205,7 @@ namespace automotive {
                             m_eOld = 0;
                         }
                         
-                        e = (distance - (m_image->width/2.0 - left.x))/distance;
+                        e = (distance - (gray->width/2.0 - left.x))/distance;
 
                         useRightLaneMarking = false;
                     }
@@ -207,8 +222,8 @@ namespace automotive {
 
             // Show resulting features.
             if (m_debug) {
-                if (m_image != NULL) {
-                    cvShowImage("WindowShowImage", m_image);
+                if (gray != NULL) {
+                    cvShowImage("WindowShowImage", gray);
                     cvWaitKey(10);
                 }
             }
