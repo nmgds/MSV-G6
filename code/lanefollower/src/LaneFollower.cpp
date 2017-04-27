@@ -47,12 +47,12 @@ namespace automotive {
 
 		using namespace cv;
 
-
         LaneFollower::LaneFollower(const int32_t &argc, char **argv) : TimeTriggeredConferenceClientModule(argc, argv, "lanefollower"),
             m_hasAttachedToSharedImageMemory(false),
             m_sharedImageMemory(),
             m_image(NULL),
             gray(NULL),
+            thresh(NULL),
             m_debug(false),
             m_font(),
             m_previousTime(),
@@ -103,7 +103,11 @@ namespace automotive {
 			        // For example, simply show the image.
 			        if (m_image == NULL) {
 				        m_image = cvCreateImage(cvSize(si.getWidth(), si.getHeight()), IPL_DEPTH_8U, numberOfChannels);
+				        // Creating IplImages for image processing (grayscale and thresholding) 
 				        gray = cvCreateImage(cvSize(m_image->width, m_image->height), IPL_DEPTH_8U, 1);
+				        thresh = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
+
+				        
 				        
 			        }
 
@@ -114,14 +118,18 @@ namespace automotive {
 						       m_sharedImageMemory->getSharedMemory(),
 						       si.getWidth() * si.getHeight() * numberOfChannels);
 						       
-						       // Converting m_image to gray scale
 						       if (m_image != NULL && gray != NULL){
+								   
+							    // Converting m_image to gray scale
 						       cvCvtColor(m_image, gray, CV_RGB2GRAY);
+						       
+						       // Gaussian threshold on gray
+						       cvAdaptiveThreshold(gray, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,21,11);
+						       
 						   }
 			        }
 
-			        // Mirror the image.
-			        cvFlip(gray, 0, -1);
+			        cvFlip(thresh, 0, -1);
 
 
 			        retVal = true;
@@ -138,15 +146,15 @@ namespace automotive {
             const int32_t distance = 220;
 
             TimeStamp beforeImageProcessing;
-            for(int32_t y = gray->height - 8; y > gray->height * .6; y -= 10) {
+            for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
                 
                 // Search from middle to the right:
                 CvScalar pixelRight;
                 CvPoint right;
                 right.y = y;
                 right.x = -1;
-                for(int x = gray->width/2; x < gray->width; x++) {
-		            pixelRight = cvGet2D(gray, y, x);
+                for(int x = thresh->width/2; x < thresh->width; x++) {
+		            pixelRight = cvGet2D(thresh, y, x);
 		            if (pixelRight.val[0] >= 200) {
                         right.x = x;
                         break;
@@ -158,8 +166,8 @@ namespace automotive {
                 CvPoint left;
                 left.y = y;
                 left.x = -1;
-                for(int x = gray->width/2; x > 0; x--) {
-		            pixelLeft = cvGet2D(gray, y, x);
+                for(int x = thresh->width/2; x > 0; x--) {
+		            pixelLeft = cvGet2D(thresh, y, x);
 		            if (pixelLeft.val[0] >= 200) {
                         left.x = x;
                         break;
@@ -170,19 +178,19 @@ namespace automotive {
                 if (m_debug) {
                     if (left.x > 0) {
                     	CvScalar green = CV_RGB(0, 255, 0);
-                    	cvLine(gray, cvPoint(gray->width/2, y), left, green, 1, 8);
+                    	cvLine(thresh, cvPoint(thresh->width/2, y), left, green, 1, 8);
 
                         stringstream sstr;
-                        sstr << (gray->width/2 - left.x);
-                    	cvPutText(gray, sstr.str().c_str(), cvPoint(gray->width/2 - 100, y - 2), &m_font, green);
+                        sstr << (thresh->width/2 - left.x);
+                    	cvPutText(thresh, sstr.str().c_str(), cvPoint(thresh->width/2 - 100, y - 2), &m_font, green);
                     }
                     if (right.x > 0) {
                     	CvScalar red = CV_RGB(255, 0, 0);
-                    	cvLine(gray, cvPoint(gray->width/2, y), right, red, 1, 8);
+                    	cvLine(thresh, cvPoint(thresh->width/2, y), right, red, 1, 8);
 
                         stringstream sstr;
-                        sstr << (right.x - gray->width/2);
-                    	cvPutText(gray, sstr.str().c_str(), cvPoint(gray->width/2 + 100, y - 2), &m_font, red);
+                        sstr << (right.x - thresh->width/2);
+                    	cvPutText(thresh, sstr.str().c_str(), cvPoint(thresh->width/2 + 100, y - 2), &m_font, red);
                     }
                 }
 
@@ -195,7 +203,7 @@ namespace automotive {
                             m_eOld = 0;
                         }
                         
-                        e = ((right.x - gray->width/2.0) - distance)/distance;
+                        e = ((right.x - thresh->width/2.0) - distance)/distance;
 
                         useRightLaneMarking = true;
                     }
@@ -205,7 +213,7 @@ namespace automotive {
                             m_eOld = 0;
                         }
                         
-                        e = (distance - (gray->width/2.0 - left.x))/distance;
+                        e = (distance - (thresh->width/2.0 - left.x))/distance;
 
                         useRightLaneMarking = false;
                     }
@@ -222,8 +230,8 @@ namespace automotive {
 
             // Show resulting features.
             if (m_debug) {
-                if (gray != NULL) {
-                    cvShowImage("WindowShowImage", gray);
+                if (thresh != NULL) {
+                    cvShowImage("WindowShowImage", thresh);
                     cvWaitKey(10);
                 }
             }

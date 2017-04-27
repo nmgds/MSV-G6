@@ -128,6 +128,7 @@ class LaneFollowerTest : public CxxTest::TestSuite {
             Container c(si);
 
             TS_ASSERT(ldt->callReadSharedImage(c) == true);
+
         }
 
         void testLaneFollowerProcessingMethodInvalidSharedMemory() {
@@ -147,7 +148,8 @@ class LaneFollowerTest : public CxxTest::TestSuite {
             // Create a container.
             Container c(si);
 
-            TS_ASSERT(ldt->callReadSharedImage(c) == false);
+           TS_ASSERT(ldt->callReadSharedImage(c) == false);
+
         }
         
 
