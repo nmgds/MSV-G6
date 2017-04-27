@@ -124,7 +124,7 @@ namespace automotive {
 						       cvCvtColor(m_image, gray, CV_RGB2GRAY);
 						       
 						       // Gaussian threshold on gray
-						       cvAdaptiveThreshold(gray, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,21,11);
+						       cvAdaptiveThreshold(gray, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,7);
 						       
 						   }
 			        }
