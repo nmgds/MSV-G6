@@ -118,7 +118,7 @@ namespace automotive {
 						       m_sharedImageMemory->getSharedMemory(),
 						       si.getWidth() * si.getHeight() * numberOfChannels);
 						       
-						       if (m_image != NULL && gray != NULL){
+						       if (m_image != NULL && gray != NULL && thresh != NULL && blur != NULL){
 								   
 							    // Converting m_image to gray scale
 						       cvCvtColor(m_image, gray, CV_RGB2GRAY);
@@ -273,9 +273,9 @@ namespace automotive {
             //const double Ki = 0.0123123;
 			//const double Kd = 0.00;
 
-		    const double Kp = 1.2;
+		    const double Kp = 1.26;
             const double Ki = 0.0123123;
-			const double Kd = 0.5;
+			const double Kd = 0.7;
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;
