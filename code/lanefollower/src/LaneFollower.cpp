@@ -53,6 +53,7 @@ namespace automotive {
             m_image(NULL),
             gray(NULL),
             thresh(NULL),
+            blur(NULL),
             m_debug(false),
             m_font(),
             m_previousTime(),
@@ -105,10 +106,9 @@ namespace automotive {
 				        m_image = cvCreateImage(cvSize(si.getWidth(), si.getHeight()), IPL_DEPTH_8U, numberOfChannels);
 				        // Creating IplImages for image processing (grayscale and thresholding) 
 				        gray = cvCreateImage(cvSize(m_image->width, m_image->height), IPL_DEPTH_8U, 1);
+				        blur = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
 				        thresh = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
 
-				        
-				        
 			        }
 
 			        // Copying the image data is very expensive...
@@ -124,12 +124,16 @@ namespace automotive {
 						       cvCvtColor(m_image, gray, CV_RGB2GRAY);
 						       
 						       // Gaussian threshold on gray
-						       cvAdaptiveThreshold(gray, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,7);
-						       
+						       //cvAdaptiveThreshold(gray, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
+						       //cvThreshold(gray, thresh, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+						       cvSmooth(gray, blur, CV_GAUSSIAN, 9, 9, 10);
+						       cvAdaptiveThreshold(blur, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
+
 						   }
 			        }
 
 			        cvFlip(thresh, 0, -1);
+			        cvFlip(m_image, 0, -1);
 
 
 			        retVal = true;
@@ -178,19 +182,19 @@ namespace automotive {
                 if (m_debug) {
                     if (left.x > 0) {
                     	CvScalar green = CV_RGB(0, 255, 0);
-                    	cvLine(thresh, cvPoint(thresh->width/2, y), left, green, 1, 8);
+                    	cvLine(m_image, cvPoint(m_image->width/2, y), left, green, 1, 8);
 
                         stringstream sstr;
-                        sstr << (thresh->width/2 - left.x);
-                    	cvPutText(thresh, sstr.str().c_str(), cvPoint(thresh->width/2 - 100, y - 2), &m_font, green);
+                        sstr << (m_image->width/2 - left.x);
+                    	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 - 100, y - 2), &m_font, green);
                     }
                     if (right.x > 0) {
                     	CvScalar red = CV_RGB(255, 0, 0);
-                    	cvLine(thresh, cvPoint(thresh->width/2, y), right, red, 1, 8);
+                    	cvLine(m_image, cvPoint(m_image->width/2, y), right, red, 1, 8);
 
                         stringstream sstr;
-                        sstr << (right.x - thresh->width/2);
-                    	cvPutText(thresh, sstr.str().c_str(), cvPoint(thresh->width/2 + 100, y - 2), &m_font, red);
+                        sstr << (right.x - m_image->width/2);
+                    	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 + 100, y - 2), &m_font, red);
                     }
                 }
 
@@ -230,8 +234,9 @@ namespace automotive {
 
             // Show resulting features.
             if (m_debug) {
-                if (thresh != NULL) {
+                if (thresh != NULL && m_image != NULL) {
                     cvShowImage("WindowShowImage", thresh);
+                    cvShowImage("WindowMImage", m_image);
                     cvWaitKey(10);
                 }
             }
@@ -264,11 +269,13 @@ namespace automotive {
            // const double Ki = 3.11;
            // const double Kd = 0.003;
 		   
-		    const double Kp = 1.009;
+		    //const double Kp = 1.009;
+            //const double Ki = 0.0123123;
+			//const double Kd = 0.00;
+
+		    const double Kp = 1.2;
             const double Ki = 0.0123123;
-			const double Kd = 0.00;
-
-
+			const double Kd = 0.5;
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;

@@ -88,6 +88,7 @@ namespace automotive {
 	            IplImage *m_image;
 	            IplImage *gray;
 	            IplImage *thresh;
+	            IplImage *blur;
                 bool m_debug;
                 CvFont m_font;
 
