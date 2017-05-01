@@ -1,0 +1,59 @@
+version: '2'
+
+services:
+  # odsupercomponent
+  odsupercomponent:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    network_mode: host
+    volumes:
+      - ../configuration:/opt/configuration
+    command: "/opt/od4/bin/odsupercomponent
+      --cid=111
+      --freq=10
+      --verbose=1
+      --configuration=/opt/configuration"
+
+  # odsimvehicle
+  odsimvehicle:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    depends_on:
+      - odsupercomponent
+    user: odv
+    network_mode: host
+    ipc: host
+    command: "/opt/od4/bin/odsimvehicle
+      --cid=111
+      --freq=10"
+
+  # odsimirus
+  odsimirus:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    depends_on:
+      - odsupercomponent
+    user: odv
+    network_mode: host
+    ipc: host
+    command: "/opt/od4/bin/odsimirus
+      --cid=111
+      --freq=10"
+
+  # odcockpit
+  odcockpit:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    depends_on:
+      - odsupercomponent
+    user: odv
+    network_mode: host
+    ipc: host
+    command: "/opt/od4/bin/odcockpit
+      --cid=111"
+
+  # odsimvehicle
+  # odsimvehicle:
+  #   image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+  #   user: odv
+  #   network_mode: host
+  #   ipc: host
+  #   command: "/opt/od4/bin/miniature/sidwaysparker
+  #     --cid=111
+  #     --freq=10"
