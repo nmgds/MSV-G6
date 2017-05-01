@@ -21,6 +21,7 @@
 #define LANEFOLLOWER_H_
 
 #include <opencv/cv.h>
+#include <opencv2/opencv.hpp>
 
 #include <memory>
 #include "opendavinci/odcore/base/module/TimeTriggeredConferenceClientModule.h"
@@ -85,6 +86,9 @@ namespace automotive {
 	            bool m_hasAttachedToSharedImageMemory;
 	            std::shared_ptr<odcore::wrapper::SharedMemory> m_sharedImageMemory;
 	            IplImage *m_image;
+	            IplImage *gray;
+	            IplImage *thresh;
+	            IplImage *blur;
                 bool m_debug;
                 CvFont m_font;
 

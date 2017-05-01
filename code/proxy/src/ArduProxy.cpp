@@ -150,12 +150,12 @@ namespace automotive {
 			automotive::VehicleControl vc = c.getData<VehicleControl>();
 			
 			steeringValue = vc.getSteeringWheelAngle();
-			desired_steering= (int)floor(steeringValue*-200);
+			desired_steering= (int)floor(steeringValue*(180/3.14)*-1);
 			//desired_speed = vc.getSpeed();
 			cout<<"Steering:" << desired_steering<<endl;
 			//cout<<"Speed:"<<desired_speed<<endl;
 			
-			if(counter == 10){
+			if(counter == 3){
 				average_steering = average_steering / counter;
 				//send data to the serial
 				if(average_steering > 30){

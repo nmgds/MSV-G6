@@ -21,6 +21,8 @@
 
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/opencv.hpp>
 
 #include "opendavinci/odcore/base/KeyValueConfiguration.h"
 #include "opendavinci/odcore/base/Lock.h"
@@ -43,10 +45,15 @@ namespace automotive {
         using namespace automotive;
         using namespace automotive::miniature;
 
+		using namespace cv;
+
         LaneFollower::LaneFollower(const int32_t &argc, char **argv) : TimeTriggeredConferenceClientModule(argc, argv, "lanefollower"),
             m_hasAttachedToSharedImageMemory(false),
             m_sharedImageMemory(),
             m_image(NULL),
+            gray(NULL),
+            thresh(NULL),
+            blur(NULL),
             m_debug(false),
             m_font(),
             m_previousTime(),
@@ -67,8 +74,8 @@ namespace automotive {
 
         void LaneFollower::tearDown() {
 	        // This method will be call automatically _after_ return from body().
-	        if (m_image != NULL) {
-		        cvReleaseImage(&m_image);
+	        if (gray != NULL) {
+		        cvReleaseImage(&gray);
 	        }
 
 	        if (m_debug) {
@@ -97,17 +104,37 @@ namespace automotive {
 			        // For example, simply show the image.
 			        if (m_image == NULL) {
 				        m_image = cvCreateImage(cvSize(si.getWidth(), si.getHeight()), IPL_DEPTH_8U, numberOfChannels);
+				        // Creating IplImages for image processing (grayscale and thresholding) 
+				        gray = cvCreateImage(cvSize(m_image->width, m_image->height), IPL_DEPTH_8U, 1);
+				        blur = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
+				        thresh = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
+
 			        }
 
 			        // Copying the image data is very expensive...
+			        
 			        if (m_image != NULL) {
 				        memcpy(m_image->imageData,
 						       m_sharedImageMemory->getSharedMemory(),
 						       si.getWidth() * si.getHeight() * numberOfChannels);
+						       
+						       if (m_image != NULL && gray != NULL && thresh != NULL && blur != NULL){
+								   
+							    // Converting m_image to gray scale
+						       cvCvtColor(m_image, gray, CV_RGB2GRAY);
+						       
+						       // Gaussian threshold on gray
+						       //cvAdaptiveThreshold(gray, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
+						       //cvThreshold(gray, thresh, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+						       cvSmooth(gray, blur, CV_GAUSSIAN, 9, 9, 10);
+						       cvAdaptiveThreshold(blur, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
+
+						   }
 			        }
 
-			        // Mirror the image.
+			        cvFlip(thresh, 0, -1);
 			        cvFlip(m_image, 0, -1);
+
 
 			        retVal = true;
 		        }
@@ -119,36 +146,38 @@ namespace automotive {
             static bool useRightLaneMarking = true;
             double e = 0;
 
-            const int32_t CONTROL_SCANLINE = 462; // calibrated length to right: 280px
-            const int32_t distance = 280;
+            const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
+            const int32_t distance = 220;
 
             TimeStamp beforeImageProcessing;
-            for(int32_t y = m_image->height - 8; y > m_image->height * .6; y -= 10) {
+            for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
+                
+                // Search from middle to the right:
+                CvScalar pixelRight;
+                CvPoint right;
+                right.y = y;
+                right.x = -1;
+                for(int x = thresh->width/2; x < thresh->width; x++) {
+		            pixelRight = cvGet2D(thresh, y, x);
+		            if (pixelRight.val[0] >= 200) {
+                        right.x = x;
+                        break;
+                    }
+                }
+                
                 // Search from middle to the left:
                 CvScalar pixelLeft;
                 CvPoint left;
                 left.y = y;
                 left.x = -1;
-                for(int x = m_image->width/2; x > 0; x--) {
-		            pixelLeft = cvGet2D(m_image, y, x);
+                for(int x = thresh->width/2; x > 0; x--) {
+		            pixelLeft = cvGet2D(thresh, y, x);
 		            if (pixelLeft.val[0] >= 200) {
                         left.x = x;
                         break;
                     }
                 }
 
-                // Search from middle to the right:
-                CvScalar pixelRight;
-                CvPoint right;
-                right.y = y;
-                right.x = -1;
-                for(int x = m_image->width/2; x < m_image->width; x++) {
-		            pixelRight = cvGet2D(m_image, y, x);
-		            if (pixelRight.val[0] >= 200) {
-                        right.x = x;
-                        break;
-                    }
-                }
 
                 if (m_debug) {
                     if (left.x > 0) {
@@ -171,13 +200,14 @@ namespace automotive {
 
                 if (y == CONTROL_SCANLINE) {
                     // Calculate the deviation error.
+                    
                     if (right.x > 0) {
                         if (!useRightLaneMarking) {
                             m_eSum = 0;
                             m_eOld = 0;
                         }
-
-                        e = ((right.x - m_image->width/2.0) - distance)/distance;
+                        
+                        e = ((right.x - thresh->width/2.0) - distance)/distance;
 
                         useRightLaneMarking = true;
                     }
@@ -187,7 +217,7 @@ namespace automotive {
                             m_eOld = 0;
                         }
                         
-                        e = (distance - (m_image->width/2.0 - left.x))/distance;
+                        e = (distance - (thresh->width/2.0 - left.x))/distance;
 
                         useRightLaneMarking = false;
                     }
@@ -204,8 +234,9 @@ namespace automotive {
 
             // Show resulting features.
             if (m_debug) {
-                if (m_image != NULL) {
-                    cvShowImage("WindowShowImage", m_image);
+                if (thresh != NULL && m_image != NULL) {
+                    cvShowImage("WindowShowImage", thresh);
+                    cvShowImage("WindowMImage", m_image);
                     cvWaitKey(10);
                 }
             }
@@ -220,14 +251,31 @@ namespace automotive {
             else {
                 m_eSum += e;
             }
-//            const double Kp = 2.5;
-//            const double Ki = 8.5;
-//            const double Kd = 0;
+            //const double Kp = 2.5;
+            //const double Ki = 8.5;
+//           const double Kd = 0;
 
             // The following values have been determined by Twiddle algorithm.
+			/*
             const double Kp = 0.4482626884328734;
             const double Ki = 3.103197570937628;
             const double Kd = 0.030450210485408566;
+            */
+          //  const double Kp = 1.193434;
+          //  const double Ki = 0.090000;
+          //  const double Kd = 0.160000;
+          
+           // const double Kp = 0.440;
+           // const double Ki = 3.11;
+           // const double Kd = 0.003;
+		   
+		    //const double Kp = 1.009;
+            //const double Ki = 0.0123123;
+			//const double Kd = 0.00;
+
+		    const double Kp = 1.26;
+            const double Ki = 0.0123123;
+			const double Kd = 0.7;
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;
@@ -238,12 +286,15 @@ namespace automotive {
             double desiredSteering = 0;
             if (fabs(e) > 1e-2) {
                 desiredSteering = y;
-
-                if (desiredSteering > 25.0) {
-                    desiredSteering = 25.0;
+				
+				//right turning
+                if (desiredSteering > 25) {
+                   desiredSteering = 25;
                 }
-                if (desiredSteering < -25.0) {
-                    desiredSteering = -25.0;
+              
+                //left turning
+                if (desiredSteering < -25) {
+                   desiredSteering = -25;
                 }
             }
             cerr << "PID: " << "e = " << e << ", eSum = " << m_eSum << ", desiredSteering = " << desiredSteering << ", y = " << y << endl;
@@ -271,28 +322,28 @@ namespace automotive {
             cvInitFont(&m_font, CV_FONT_HERSHEY_DUPLEX, hscale, vscale, shear, thickness, lineType);
 
             // Parameters for overtaking.
-            const int32_t ULTRASONIC_FRONT_CENTER = 3;
-            const int32_t ULTRASONIC_FRONT_RIGHT = 4;
-            const int32_t INFRARED_FRONT_RIGHT = 0;
-            const int32_t INFRARED_REAR_RIGHT = 2;
+            //const int32_t ULTRASONIC_FRONT_CENTER = 3;
+            //const int32_t ULTRASONIC_FRONT_RIGHT = 4;
+            //const int32_t INFRARED_FRONT_RIGHT = 0;
+            //const int32_t INFRARED_REAR_RIGHT = 2;
 
-            const double OVERTAKING_DISTANCE = 5.5;
-            const double HEADING_PARALLEL = 0.04;
+            //const double OVERTAKING_DISTANCE = 5.5;
+            //const double HEADING_PARALLEL = 0.04;
 
             // Overall state machines for moving and measuring.
             enum StateMachineMoving { FORWARD, TO_LEFT_LANE_LEFT_TURN, TO_LEFT_LANE_RIGHT_TURN, CONTINUE_ON_LEFT_LANE, TO_RIGHT_LANE_RIGHT_TURN, TO_RIGHT_LANE_LEFT_TURN };
             enum StateMachineMeasuring { DISABLE, FIND_OBJECT_INIT, FIND_OBJECT, FIND_OBJECT_PLAUSIBLE, HAVE_BOTH_IR, HAVE_BOTH_IR_SAME_DISTANCE, END_OF_OBJECT };
 
-            StateMachineMoving stageMoving = FORWARD;
-            StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
+            //StateMachineMoving stageMoving = FORWARD;
+            //StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
 
             // State counter for dynamically moving back to right lane.
-            int32_t stageToRightLaneRightTurn = 0;
-            int32_t stageToRightLaneLeftTurn = 0;
+            //int32_t stageToRightLaneRightTurn = 0;
+            //int32_t stageToRightLaneLeftTurn = 0;
 
             // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
-            double distanceToObstacle = 0;
-            double distanceToObstacleOld = 0;
+            //double distanceToObstacle = 0;
+            //double distanceToObstacleOld = 0;
 
             // Overall state machine handler.
 	        while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
@@ -311,7 +362,7 @@ namespace automotive {
 			        processImage();
 		        }
 
-
+/*
                 // Overtaking part.
                 {
 	                // 1. Get most recent vehicle data:
@@ -449,6 +500,7 @@ namespace automotive {
                         }
                     }
                 }
+				 * */
 
                 // Create container for finally sending the set values for the control algorithm.
                 Container c2(m_vehicleControl);
