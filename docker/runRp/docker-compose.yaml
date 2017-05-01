@@ -1,0 +1,43 @@
+version: '2'
+
+services:
+  # odsupercomponent
+  odsupercomponent:
+    image: navysealswithac/scaledcars-rpi
+    network_mode: host
+    volumes:
+      - ../configuration:/opt/configuration
+    command: "/opt/od4/bin/odsupercomponent
+      --cid=111
+      --verbose=1
+      --configuration=/opt/configuration"
+
+  # proxy-camera
+  proxy-camera:
+    image: navysealswithac/scaledcars-rpi
+    group_add:
+      - video
+    depends_on:
+      - odsupercomponent
+    devices:
+      - "/dev/video0:/dev/video0"
+    user: odv
+    network_mode: host
+    ipc: host
+    command: "/opt/opendlv.core/bin/opendlv-core-system-proxy-camera
+      --cid=111
+      --freq=10"
+
+  # lanefollower
+  lanefollower:
+    image: navysealswithac/scaledcars-rpi
+    depends_on:
+      - odsupercomponent
+      - proxy-camera
+    user: odv
+    network_mode: host
+    ipc: host
+    command: "/opt/od4/bin/miniature/lanefollower 
+    --cid=111
+    --freq=10
+    --verbose=1"

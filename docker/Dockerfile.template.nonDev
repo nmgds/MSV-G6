@@ -30,3 +30,4 @@ ENV QT_X11_NO_MITSHM=1
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/opendlv.scaledcars/lib
 WORKDIR /opt/opendlv.scaledcars/bin
 
+
