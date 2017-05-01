@@ -43,17 +43,18 @@ void setup() {
   steering.write(60);
   motors.writeMicroseconds(1500);
   attachInterrupt(digitalPinToInterrupt(3), rcControllerInterrupt, RISING);
-  Serial.begin(38400);
+  Serial.begin(9600);
 }
 void loop() {
   // put your main code here, to run repeatedly:
   //checkRC();
-  steer = pulseIn(steerPinRC, HIGH);
-  drive = pulseIn(escPinRC, HIGH);
+ // steer = pulseIn(steerPinRC, HIGH);
+ // drive = pulseIn(escPinRC, HIGH);
 
-  if (steer == 0)
-  {    
-    steering.write(currentSteering);
+//  Serial.println(steer);
+//  if (steer == 0)
+//  {    
+   steering.write(currentSteering);
     motors.writeMicroseconds(currentSpeed);
     
     if(Serial.available() > 0){
@@ -65,10 +66,18 @@ void loop() {
         moveCar(cmd);
       }
     }
+  
+//  else {
+//    remoteControl();
+//  }
+/*
+  if(Serial.available() > 0){
+    String cmd = Serial.readStringUntil('\n');
+    steering.write(60+cmd.toInt());
+
+    
   }
-  else {
-    remoteControl();
-  }
+  */
 
 }
 void checkRC() {
