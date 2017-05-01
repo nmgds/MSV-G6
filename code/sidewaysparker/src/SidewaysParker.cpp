@@ -54,7 +54,7 @@ namespace automotive {
 
         // This method will do the main data processing job.
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode SidewaysParker::body() {
-            const double ULTRASONIC_FRONT_RIGHT = 0;
+            const double IR_RIGHT_FRONT = 0;
             double distanceOld = 0;
             double absPathStart = 0;
             double absPathEnd = 0;
@@ -80,31 +80,37 @@ namespace automotive {
                     vc.setSpeed(2);
                     vc.setSteeringWheelAngle(0);
                 }
-                if ((stageMoving > 0) && (stageMoving < 40)) {
+                if ((stageMoving > 0) && (stageMoving < 30)) {
                     // Move slightly forward.
-                    vc.setSpeed(.4);
+                    vc.setSpeed(.3);
                     vc.setSteeringWheelAngle(0);
                     stageMoving++;
                 }
-                if ((stageMoving >= 40) && (stageMoving < 45)) {
+                if ((stageMoving >= 30) && (stageMoving < 35)) {
                     // Stop.
                     vc.setSpeed(0);
                     vc.setSteeringWheelAngle(0);
                     stageMoving++;
                 }
-                if ((stageMoving >= 45) && (stageMoving < 85)) {
+                if ((stageMoving >= 35) && (stageMoving < 75)) {
                     // Backwards, steering wheel to the right.
                     vc.setSpeed(-1.6);
                     vc.setSteeringWheelAngle(25);
                     stageMoving++;
                 }
-                if ((stageMoving >= 85) && (stageMoving < 220)) {
+                if ((stageMoving >= 75) && (stageMoving < 110)) {
                     // Backwards, steering wheel to the left.
-                    vc.setSpeed(-.175);
+                    vc.setSpeed(-1.2);
                     vc.setSteeringWheelAngle(-25);
                     stageMoving++;
                 }
-                if (stageMoving >= 220) {
+                if ((stageMoving >= 110)) {
+                    // Backwards, steering wheel to the left.
+                    vc.setSpeed(-.5);
+                    vc.setSteeringWheelAngle(0);
+                    stageMoving++;
+                }
+                if ((sbd.getValueForKey_MapOfDistances(1) < 3) && (sbd.getValueForKey_MapOfDistances(1) > 1)) {
                     // Stop.
                     vc.setSpeed(0);
                     vc.setSteeringWheelAngle(0);
@@ -115,25 +121,25 @@ namespace automotive {
                     case 0:
                         {
                             // Initialize measurement.
-                            distanceOld = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
+                            distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
                             stageMeasuring++;
                         }
                     break;
                     case 1:
                         {
                             // Checking for sequence +, -.
-                            if ((distanceOld > 0) && (sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT) < 0)) {
+                            if ((distanceOld > 0) && (sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0)) {
                                 // Found sequence +, -.
                                 stageMeasuring = 2;
                                 absPathStart = vd.getAbsTraveledPath();
                             }
-                            distanceOld = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
+                            distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
                         }
                     break;
                     case 2:
                         {
                             // Checking for sequence -, +.
-                            if ((distanceOld < 0) && (sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT) > 0)) {
+                            if ((distanceOld < 0) && (sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) > 0)) {
                                 // Found sequence -, +.
                                 stageMeasuring = 1;
                                 absPathEnd = vd.getAbsTraveledPath();
@@ -146,7 +152,7 @@ namespace automotive {
                                     stageMoving = 1;
                                 }
                             }
-                            distanceOld = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
+                            distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
                         }
                     break;
                 }
