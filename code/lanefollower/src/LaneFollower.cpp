@@ -273,9 +273,13 @@ namespace automotive {
             //const double Ki = 0.0123123;
 			//const double Kd = 0.00;
 
-		    const double Kp = 1.26;
-            const double Ki = 0.0123123;
-			const double Kd = 0.7;
+	
+			// Get PID data from configuration file
+		    KeyValueConfiguration kva = getKeyValueConfiguration(); 
+	        
+		    const double Kp = kva.getValue<int32_t> ("lanefollower.Kp");
+            const double Ki = kva.getValue<int32_t> ("lanefollower.Ki");
+			const double Kd = kva.getValue<int32_t> ("lanefollower.Kd");
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;
