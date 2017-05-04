@@ -200,6 +200,23 @@ void SerialReceiveBytes::nextString(const std::string &s){
 			}
 			sensorBoardData.putTo_MapOfDistances(1, IR3);
 
+			//what is left is ultrasound center [id 3]
+			std::getline(ss, token, ',');
+			double UR1 = atof(token.c_str());
+			if(UR1 > 70 || UR1 < 5){
+				UR1 = -1;
+			}
+			sensorBoardData.putTo_MapOfDistances(3, UR1);
+
+
+			//what is left is ultrasound side [id 4]
+			std::getline(ss, token, ',');
+			double UR2 = atof(token.c_str());
+			if(UR2 > 70 || UR2 < 5){
+				UR2 = -1;
+			}
+			sensorBoardData.putTo_MapOfDistances(4, UR2);
+
 			Container cc(sensorBoardData);
 			getConference().send(cc);
 
