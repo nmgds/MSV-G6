@@ -28,11 +28,11 @@
 #include "opendavinci/odcore/data/Container.h"
 #include "opendavinci/odtools/recorder/Recorder.h"
 
+#include "automotivedata/GeneratedHeaders_AutomotiveData.h"
+
 
 namespace automotive {
     namespace miniature {
-
-        using namespace std;
 
         /**
          * This class wraps the software/hardware interface board.
@@ -78,9 +78,9 @@ namespace automotive {
 
                 void distribute(odcore::data::Container c);
 
-		string makeSteeringCommand(int steering);
-        string makeMovingCommand (int moving);
-
+		std::string makeSteeringCommand(int steering);
+        std::string makeMovingCommand (int moving);
+        automotive::miniature::SensorBoardData sensorBoardData;
         };
 
     }
