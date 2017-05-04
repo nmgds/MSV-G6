@@ -26,15 +26,21 @@
 
 #include "opendavinci/odcore/base/KeyValueConfiguration.h"
 #include "opendavinci/odcore/data/Container.h"
+#include "opendavinci/odcore/io/conference/ContainerConference.h"
 #include "opendavinci/odcore/data/TimeStamp.h"
 #include <opendavinci/odcore/wrapper/SerialPort.h>
 #include <opendavinci/odcore/base/Thread.h>
 #include <opendavinci/odcore/wrapper/SerialPortFactory.h>
 #include "automotivedata/generated/automotive/VehicleData.h"
 
+
 #include <automotivedata/GeneratedHeaders_AutomotiveData.h>
+#include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 
 #include "ArduProxy.h"
+#include "SerialReceiveBytes.hpp"
+
+
 
 namespace automotive {
     namespace miniature {
@@ -42,11 +48,11 @@ namespace automotive {
         using namespace std;
         using namespace odcore::base;
         using namespace odcore::data;
+		using namespace odcore::base::module;
         using namespace odtools::recorder;
 		using namespace odcore::wrapper;
 		
 		const string SEND_SERIAL_PORT = "/dev/ttyACM0"; 
-        const string RECEIVE_SERIAL_PORT = "/dev/ttyACM0";
         const uint32_t BAUD_RATE = 9600;
 		
 		int desired_steering = 0;
@@ -55,8 +61,13 @@ namespace automotive {
 		int counter = 0;
 		int average_steering = 0;
 
+		string serialData;
+
+		
+
         ArduProxy::ArduProxy(const int32_t &argc, char **argv) :
-            TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy")
+            TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy"), 
+			sensorBoardData()
         {}
 
         ArduProxy::~ArduProxy() {
@@ -73,7 +84,15 @@ namespace automotive {
 
         void ArduProxy::tearDown() {
             // This method will be call automatically _after_ return from body().
+
+		
         }
+
+void SerialReceiveBytes::nextString(const std::string &s){
+	        serialData = s;
+		}
+		
+
 		
 		string ArduProxy::makeSteeringCommand(int steering){
 				uint8_t payload = 0x0;
@@ -115,13 +134,15 @@ namespace automotive {
 					moving = 0 - moving;
 				}
 
-				//set the last couple of bits with the moving speed
+				//set the las t couple of bits with the moving speed
 				payload = payload | moving;
 				
 				//convert to a string to send through the serial
 				convertedPayload = string(1, payload);
 				return convertedPayload;
 		}
+
+
 
 
         // This method will do the main data processing job.
@@ -134,6 +155,13 @@ namespace automotive {
             try {			
                 std::shared_ptr<SerialPort> serial(SerialPortFactory::createSerialPort(SEND_SERIAL_PORT, BAUD_RATE));
 
+
+		
+
+			SerialReceiveBytes handler;
+			serial->setStringListener(&handler);
+			serial->start();
+
 			cout<<"Serial port created."<<endl;
 			
 			//delay for the serial to connect
@@ -145,6 +173,38 @@ namespace automotive {
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
 			
+			stringstream ss(serialData);
+			string token;
+
+			//infrared side 1 [id 0]
+			std::getline(ss, token, ',');
+			double IR1 = atof(token.c_str());
+			if(IR1 > 25 || IR1 < 5){
+				IR1 = -1;
+			}
+			sensorBoardData.putTo_MapOfDistances(0, IR1);
+
+			//infrared side 2 [id 2]
+			std::getline(ss, token, ',');
+			double IR2 = atof(token.c_str());
+			if(IR2 > 25 || IR2 < 5){
+				IR2 = -1;
+			}
+			sensorBoardData.putTo_MapOfDistances(2, IR2);
+			
+			//what is left is infrared back [id 1]
+			std::getline(ss, token, ',');
+			double IR3 = atof(token.c_str());
+			if(IR3 > 25 || IR3 < 5){
+				IR3 = -1;
+			}
+			sensorBoardData.putTo_MapOfDistances(1, IR3);
+
+			Container cc(sensorBoardData);
+			getConference().send(cc);
+
+
+
 			Container c = kvs.get(automotive::VehicleControl::ID());
 			double steeringValue;
 			automotive::VehicleControl vc = c.getData<VehicleControl>();
@@ -174,7 +234,10 @@ namespace automotive {
 				average_steering = average_steering + desired_steering;
 			}
 		}
-	serial->send(makeMovingCommand(0));			
+	serial->send(makeMovingCommand(0));	
+	//stop the serial
+	serial->stop();
+	serial->setStringListener(NULL);		
 			
             }
             catch(string &exception) {
