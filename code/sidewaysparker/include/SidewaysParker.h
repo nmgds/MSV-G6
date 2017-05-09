@@ -1,5 +1,5 @@
 /**
- * proxy - Sample application to encapsulate HW/SW interfacing with embedded systems.
+ * sidewaysparker - Sample application for realizing a sideways parking car.
  * Copyright (C) 2012 - 2015 Christian Berger
  *
  * This program is free software; you can redistribute it and/or
@@ -17,27 +17,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef ARDU_PROXY_H_
-#define ARDU_PROXY_H_
-
-#include <map>
-#include <memory>
-#include <cstring>
+#ifndef SIDEWAYSPARKER_H_
+#define SIDEWAYSPARKER_H_
 
 #include "opendavinci/odcore/base/module/TimeTriggeredConferenceClientModule.h"
-#include "opendavinci/odcore/data/Container.h"
-#include "opendavinci/odtools/recorder/Recorder.h"
-
-#include "automotivedata/GeneratedHeaders_AutomotiveData.h"
-
 
 namespace automotive {
     namespace miniature {
 
+        using namespace std;
+
         /**
-         * This class wraps the software/hardware interface board.
+         * This class is a skeleton to send driving commands to Hesperia-light's vehicle driving dynamics simulation.
          */
-        class ArduProxy : public odcore::base::module::TimeTriggeredConferenceClientModule {
+        class SidewaysParker : public odcore::base::module::TimeTriggeredConferenceClientModule {
             private:
                 /**
                  * "Forbidden" copy constructor. Goal: The compiler should warn
@@ -46,7 +39,7 @@ namespace automotive {
                  *
                  * @param obj Reference to an object of this class.
                  */
-                ArduProxy(const ArduProxy &/*obj*/);
+                SidewaysParker(const SidewaysParker &/*obj*/);
 
                 /**
                  * "Forbidden" assignment operator. Goal: The compiler should warn
@@ -56,7 +49,7 @@ namespace automotive {
                  * @param obj Reference to an object of this class.
                  * @return Reference to this instance.
                  */
-                ArduProxy& operator=(const ArduProxy &/*obj*/);
+                SidewaysParker& operator=(const SidewaysParker &/*obj*/);
 
             public:
                 /**
@@ -65,9 +58,9 @@ namespace automotive {
                  * @param argc Number of command line arguments.
                  * @param argv Command line arguments.
                  */
-                ArduProxy(const int32_t &argc, char **argv);
+                SidewaysParker(const int32_t &argc, char **argv);
 
-                virtual ~ArduProxy();
+                virtual ~SidewaysParker();
 
                 odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode body();
 
@@ -75,15 +68,9 @@ namespace automotive {
                 virtual void setUp();
 
                 virtual void tearDown();
-
-                void distribute(odcore::data::Container c);
-
-		std::string makeSteeringCommand(int steering);
-        std::string makeMovingCommand (int moving);
-        automotive::miniature::SensorBoardData sensorBoardData;
         };
 
     }
 } // automotive::miniature
 
-#endif /*PROXY_H_*/
+#endif /*SIDEWAYSPARKER_H_*/
