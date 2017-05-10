@@ -27,19 +27,19 @@ services:
       --freq=${FREQ}"
 
   # odsimirus
-  odsimirus:
-    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base:v0.0.7
-    depends_on:
-      - odsupercomponent
-    user: odv
-    network_mode: host
-    volumes:
-      - .:/opt/configuration
-    working_dir: /opt/configuration
-    ipc: host
-    command: "/opt/od4/bin/odsimirus
-      --cid=${CID}
-      --freq=${FREQ}"
+  # odsimirus:
+  #   image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base:v0.0.7
+  #   depends_on:
+  #     - odsupercomponent
+  #   user: odv
+  #   network_mode: host
+  #   volumes:
+  #     - .:/opt/configuration
+  #   working_dir: /opt/configuration
+  #   ipc: host
+  #   command: "/opt/od4/bin/odsimirus
+  #     --cid=${CID}
+  #     --freq=${FREQ}"
 
   # odcockpit
   odcockpit:
@@ -64,5 +64,17 @@ services:
     network_mode: host
     ipc: host
     command: "/opt/opendlv.scaledcars/bin/miniature/sidewaysparker
-      --cid=111
-      --freq=10"
+      --cid=${CID}
+      --freq=${FREQ}"
+
+  # ardu-proxy
+  ardu-proxy:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base:v0.0.7
+    user: odv
+    network_mode: host
+    ipc: host
+    devices:
+      - "/dev/ttyACM0"
+    command: "/opt/opendlv.scaledcars/bin/miniature/ardu-proxy
+      --cid=${CID}
+      --freq=${FREQ}"

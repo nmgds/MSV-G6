@@ -90,6 +90,7 @@ namespace automotive {
 
 void SerialReceiveBytes::nextString(const std::string &s){
 	        serialData = s;
+	        cout << serialData << endl;
 		}
 		
 

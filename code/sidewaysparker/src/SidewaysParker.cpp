@@ -116,6 +116,8 @@ namespace automotive {
                     vc.setSteeringWheelAngle(0);
                 }
 
+                cout << sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) << endl;
+
                 // Measuring state machine.
                 switch (stageMeasuring) {
                     case 0:
