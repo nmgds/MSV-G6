@@ -147,11 +147,11 @@ namespace automotive {
             double e = 0;
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
-            const int32_t distance = 210;
+            const int32_t distance = 100;
 
             TimeStamp beforeImageProcessing;
             //for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
-              for(int32_t y = thresh->height - 8; y > thresh->height * .7; y -= 10) {
+              for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
                 // Search from middle to the right:
                 CvScalar pixelRight;
                 CvPoint right;
