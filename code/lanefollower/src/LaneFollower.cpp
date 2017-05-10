@@ -178,7 +178,6 @@ namespace automotive {
                     }
                 }
 
-
                 if (m_debug) {
                     if (left.x > 0) {
                     	CvScalar green = CV_RGB(0, 255, 0);
