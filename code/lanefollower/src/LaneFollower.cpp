@@ -33,6 +33,8 @@
 #include "automotivedata/GeneratedHeaders_AutomotiveData.h"
 #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 
+#include "odvdscaledcarsdatamodel/generated/chalmersrevere/scaledcars/CarStatus.h"
+
 #include "LaneFollower.h"
 
 namespace automotive {
@@ -333,6 +335,7 @@ namespace automotive {
             // Overall state machines for moving and measuring.
             enum StateMachineMoving { FORWARD, TO_LEFT_LANE_LEFT_TURN, TO_LEFT_LANE_RIGHT_TURN, CONTINUE_ON_LEFT_LANE, TO_RIGHT_LANE_RIGHT_TURN, TO_RIGHT_LANE_LEFT_TURN };
             enum StateMachineMeasuring { DISABLE, FIND_OBJECT_INIT, FIND_OBJECT, FIND_OBJECT_PLAUSIBLE, HAVE_BOTH_IR, HAVE_BOTH_IR_SAME_DISTANCE, END_OF_OBJECT };
+            enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
 
             //StateMachineMoving stageMoving = FORWARD;
             //StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
@@ -344,173 +347,63 @@ namespace automotive {
             // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
             //double distanceToObstacle = 0;
             //double distanceToObstacleOld = 0;
+ 
+            chalmersrevere::scaledcars::CarStatus cs;
+            //cs.setStatus(4);
+            // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
+            //double distanceToObstacle = 0;
+            //double distanceToObstacleOld = 0;
+
+            bool isActive = true;
 
             // Overall state machine handler.
-	        while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
-		        bool has_next_frame = false;
+            while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
+                bool has_next_frame = false;
 
-		        // Get the most recent available container for a SharedImage.
-		        Container c = getKeyValueDataStore().get(odcore::data::image::SharedImage::ID());
-
-		        if (c.getDataType() == odcore::data::image::SharedImage::ID()) {
-			        // Example for processing the received container.
-			        has_next_frame = readSharedImage(c);
-		        }
-
-		        // Process the read image and calculate regular lane following set values for control algorithm.
-		        if (true == has_next_frame) {
-			        processImage();
-		        }
-
-/*
-                // Overtaking part.
-                {
-	                // 1. Get most recent vehicle data:
-	                Container containerVehicleData = getKeyValueDataStore().get(automotive::VehicleData::ID());
-	                VehicleData vd = containerVehicleData.getData<VehicleData> ();
-
-	                // 2. Get most recent sensor board data:
-	                Container containerSensorBoardData = getKeyValueDataStore().get(automotive::miniature::SensorBoardData::ID());
-	                SensorBoardData sbd = containerSensorBoardData.getData<SensorBoardData> ();
-
-                    // Moving state machine.
-                    if (stageMoving == FORWARD) {
-                        // Use m_vehicleControl data from image processing.
-
-                        stageToRightLaneLeftTurn = 0;
-                        stageToRightLaneRightTurn = 0;
-                    }
-                    else if (stageMoving == TO_LEFT_LANE_LEFT_TURN) {
-                        // Move to the left lane: Turn left part until both IRs see something.
-                        m_vehicleControl.setSpeed(1);
-                        m_vehicleControl.setSteeringWheelAngle(-25);
-
-                        // State machine measuring: Both IRs need to see something before leaving this moving state.
-                        stageMeasuring = HAVE_BOTH_IR;
-
-                        stageToRightLaneRightTurn++;
-                    }
-                    else if (stageMoving == TO_LEFT_LANE_RIGHT_TURN) {
-                        // Move to the left lane: Turn right part until both IRs have the same distance to obstacle.
-                        m_vehicleControl.setSpeed(1);
-                        m_vehicleControl.setSteeringWheelAngle(25);
-
-                        // State machine measuring: Both IRs need to have the same distance before leaving this moving state.
-                        stageMeasuring = HAVE_BOTH_IR_SAME_DISTANCE;
-
-                        stageToRightLaneLeftTurn++;
-                    }
-                    else if (stageMoving == CONTINUE_ON_LEFT_LANE) {
-                        // Move to the left lane: Passing stage.
-
-                        // Use m_vehicleControl data from image processing.
-
-                        // Find end of object.
-                        stageMeasuring = END_OF_OBJECT;
-                    }
-                    else if (stageMoving == TO_RIGHT_LANE_RIGHT_TURN) {
-                        // Move to the right lane: Turn right part.
-                        m_vehicleControl.setSpeed(1.5);
-                        m_vehicleControl.setSteeringWheelAngle(25);
-
-                        stageToRightLaneRightTurn--;
-                        if (stageToRightLaneRightTurn == 0) {
-                            stageMoving = TO_RIGHT_LANE_LEFT_TURN;
-                        }
-                    }
-                    else if (stageMoving == TO_RIGHT_LANE_LEFT_TURN) {
-                        // Move to the left lane: Turn left part.
-                        m_vehicleControl.setSpeed(.9);
-                        m_vehicleControl.setSteeringWheelAngle(-25);
-
-                        stageToRightLaneLeftTurn--;
-                        if (stageToRightLaneLeftTurn == 0) {
-                            // Start over.
-                            stageMoving = FORWARD;
-                            stageMeasuring = FIND_OBJECT_INIT;
-
-                            distanceToObstacle = 0;
-                            distanceToObstacleOld = 0;
-
-                            // Reset PID controller.
-                            m_eSum = 0;
-                            m_eOld = 0;
-                        }
-                    }
-
-                    // Measuring state machine.
-                    if (stageMeasuring == FIND_OBJECT_INIT) {
-                        distanceToObstacleOld = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
-                        stageMeasuring = FIND_OBJECT;
-                    }
-                    else if (stageMeasuring == FIND_OBJECT) {
-                        distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
-
-                        // Approaching an obstacle (stationary or driving slower than us).
-                        if (  (distanceToObstacle > 0) && (((distanceToObstacleOld - distanceToObstacle) > 0) || (fabs(distanceToObstacleOld - distanceToObstacle) < 1e-2)) ) {
-                            // Check if overtaking shall be started.                        
-                            stageMeasuring = FIND_OBJECT_PLAUSIBLE;
-                        }
-
-                        distanceToObstacleOld = distanceToObstacle;
-                    }
-                    else if (stageMeasuring == FIND_OBJECT_PLAUSIBLE) {
-                        if (sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER) < OVERTAKING_DISTANCE) {
-                            stageMoving = TO_LEFT_LANE_LEFT_TURN;
-
-                            // Disable measuring until requested from moving state machine again.
-                            stageMeasuring = DISABLE;
-                        }
-                        else {
-                            stageMeasuring = FIND_OBJECT;
-                        }
-                    }
-                    else if (stageMeasuring == HAVE_BOTH_IR) {
-                        // Remain in this stage until both IRs see something.
-                        if ( (sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT) > 0) && (sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT) > 0) ) {
-                            // Turn to right.
-                            stageMoving = TO_LEFT_LANE_RIGHT_TURN;
-                        }
-                    }
-                    else if (stageMeasuring == HAVE_BOTH_IR_SAME_DISTANCE) {
-                        // Remain in this stage until both IRs have the similar distance to obstacle (i.e. turn car)
-                        // and the driven parts of the turn are plausible.
-                        const double IR_FR = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
-                        const double IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
-
-                        if ((fabs(IR_FR - IR_RR) < HEADING_PARALLEL) && ((stageToRightLaneLeftTurn - stageToRightLaneRightTurn) > 0)) {
-                            // Straight forward again.
-                            stageMoving = CONTINUE_ON_LEFT_LANE;
-
-                            // Reset PID controller.
-                            m_eSum = 0;
-                            m_eOld = 0;
-                        }
-                    }
-                    else if (stageMeasuring == END_OF_OBJECT) {
-                        // Find end of object.
-                        distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
-
-                        if (distanceToObstacle < 0) {
-                            // Move to right lane again.
-                            stageMoving = TO_RIGHT_LANE_RIGHT_TURN;
-
-                            // Disable measuring until requested from moving state machine again.
-                            stageMeasuring = DISABLE;
-                        }
+                Container cont = getKeyValueDataStore().get(chalmersrevere::scaledcars::CarStatus::ID());
+                if (cont.getDataType() == chalmersrevere::scaledcars::CarStatus::ID()) {
+                    cs = cont.getData<chalmersrevere::scaledcars::CarStatus>();
+                    int carStatus = cs.getStatus();
+                    //cerr << "Reading new value " << readValue << endl;
+                    if (carStatus == LANE_FOLLOWING){
+                        isActive = true;
+                        cerr << "Active " << endl;
+                    }else{
+                        isActive = false;
+                        cerr << "Inactive " << endl;
                     }
                 }
-				 * */
 
-                // Create container for finally sending the set values for the control algorithm.
-                Container c2(m_vehicleControl);
-                // Send container.
-                getConference().send(c2);
-	        }
+                // Only exectute lanefollow algorithm if car state is set to LANE_FOLLOWING
+                if (isActive){
+                    // Get the most recent available container for a SharedImage.
+                    Container c = getKeyValueDataStore().get(odcore::data::image::SharedImage::ID());
 
-	        return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
+                    if (c.getDataType() == odcore::data::image::SharedImage::ID()) {
+                        // Example for processing the received container.
+                        has_next_frame = readSharedImage(c);
+                    }
+
+                    // Process the read image and calculate regular lane following set values for control algorithm.
+                    if (true == has_next_frame) {
+                        processImage();
+                    }
+
+                    // Create container for finally sending the set values for the control algorithm.
+                    Container c2(m_vehicleControl);
+                    // Send container.
+                    getConference().send(c2);
+
+                }            
+            }
+
+            return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
         }
 
     }
 } // automotive::miniature
+
+
+
+
 
