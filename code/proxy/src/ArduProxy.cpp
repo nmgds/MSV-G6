@@ -33,8 +33,10 @@
 #include "automotivedata/generated/automotive/VehicleData.h"
 
 #include <automotivedata/GeneratedHeaders_AutomotiveData.h>
+#include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 
 #include "ArduProxy.h"
+#include "SerialReceiveBytes.hpp"
 
 namespace automotive {
     namespace miniature {
@@ -64,10 +66,11 @@ namespace automotive {
 		const uint8_t ultrasoundClearMask = 0x3F;
 		const uint8_t infraredClearMask = 0x1F;
 
-		enum sensors{INFRARED_SIDE_1, INFRARED_BACK, INFRARED_SIDE_2, ULTRASOUND_FRONT, ULTRASOUND_SIDE};
+		enum sensors{INFRARED_SIDE_1, INFRARED_BACK, INFRARED_SIDE_2, ULTRASOUND_FRONT, ULTRASOUND_SIDE, WHEEL_ENCODER};
 		
         ArduProxy::ArduProxy(const int32_t &argc, char **argv) :
-            TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy")
+            TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy"),
+            	sensorBoardData()
         {}
 
         ArduProxy::~ArduProxy() {
@@ -86,7 +89,7 @@ namespace automotive {
 
 void SerialReceiveBytes::nextString(const std::string &s){
 	        //process string
-			//cout<<"Received:" << s;
+			cout<<"Received:" << s;
 			uint8_t val = stoi(s);
 			if((val & sensorMask)>>7){ //ultrasound Sensors
 			uint8_t sensor = val & ultrasoundClearMask;
@@ -104,12 +107,14 @@ void SerialReceiveBytes::nextString(const std::string &s){
 				uint8_t sensor = val & infraredMask;
 				sensor = sensor >> 5;
 				val = val & infraredClearMask;
-				if(val == 0){
-					val = -1;
+				if(sensor!=0){
+					if(val == 0){
+						val = -1;
+					}
 				}
 				switch(sensor){
 					case 0: //wheel encoder
-						
+						sensorValues[WHEEL_ENCODER] = sensorValues[WHEEL_ENCODER] + val;
 						break;
 					case 1: //infrared side 1
 						sensorValues[INFRARED_SIDE_1] = val;
@@ -199,6 +204,8 @@ void SerialReceiveBytes::nextString(const std::string &s){
 			sensorBoardData.putTo_MapOfDistances(INFRARED_BACK, sensorValues[INFRARED_BACK]);
 			sensorBoardData.putTo_MapOfDistances(ULTRASOUND_FRONT, sensorValues[ULTRASOUND_FRONT]);
 			sensorBoardData.putTo_MapOfDistances(ULTRASOUND_SIDE, sensorValues[ULTRASOUND_SIDE]);
+			sensorBoardData.putTo_MapOfDistances(WHEEL_ENCODER, sensorValues[WHEEL_ENCODER]);
+
 
 			Container cc(sensorBoardData);
 			getConference().send(cc);

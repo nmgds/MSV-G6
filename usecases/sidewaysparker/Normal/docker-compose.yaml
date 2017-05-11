@@ -1,0 +1,68 @@
+version: '2'
+
+services:
+  # odsupercomponent
+  odsupercomponent:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    network_mode: host
+    volumes:
+      - .:/opt/configuration
+    working_dir: /opt/configuration
+    command: "/opt/od4/bin/odsupercomponent
+      --cid=${CID}
+      --freq=${FREQ}
+      --verbose=1
+      --configuration=/opt/configuration/configuration"
+
+  # odsimvehicle
+  odsimvehicle:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    depends_on:
+      - odsupercomponent
+    user: odv
+    network_mode: host
+    ipc: host
+    command: "/opt/od4/bin/odsimvehicle
+      --cid=${CID}
+      --freq=${FREQ}"
+
+  # odsimirus
+  odsimirus:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    depends_on:
+      - odsupercomponent
+    user: odv
+    network_mode: host
+    volumes:
+      - .:/opt/configuration
+    working_dir: /opt/configuration
+    ipc: host
+    command: "/opt/od4/bin/odsimirus
+      --cid=${CID}
+      --freq=${FREQ}"
+
+  # odcockpit
+  odcockpit:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    depends_on:
+      - odsupercomponent
+    user: odv
+    network_mode: host
+    ipc: host
+    volumes:
+      - .:/opt/configuration
+    working_dir: /opt/configuration
+    environment:
+      - DISPLAY=$DISPLAY
+    command: "/opt/od4/bin/odcockpit
+      --cid=${CID}"
+
+  # sidewaysparker
+  sidewaysparker:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    user: odv
+    network_mode: host
+    ipc: host
+    command: "/opt/opendlv.scaledcars/bin/miniature/sidewaysparker
+      --cid=111
+      --freq=10"
