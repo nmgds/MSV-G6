@@ -55,6 +55,17 @@ namespace automotive {
 		int counter = 0;
 		int average_steering = 0;
 
+		uint8_t sensorValues[5];
+
+		const uint8_t sensorMask = 0x80;
+		const uint8_t ultrasoundMask = 0x40;
+		const uint8_t infraredMask = 0x60;
+
+		const uint8_t ultrasoundClearMask = 0x3F;
+		const uint8_t infraredClearMask = 0x1F;
+
+		enum sensors{INFRARED_SIDE_1, INFRARED_BACK, INFRARED_SIDE_2, ULTRASOUND_FRONT, ULTRASOUND_SIDE};
+		
         ArduProxy::ArduProxy(const int32_t &argc, char **argv) :
             TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy")
         {}
@@ -66,14 +77,52 @@ namespace automotive {
             // This method will be call automatically _before_ running body().
 
             // Get configuration data.
-            KeyValueConfiguration kv = getKeyValueConfiguration();
-
-           
+            KeyValueConfiguration kv = getKeyValueConfiguration();           
         }
 
         void ArduProxy::tearDown() {
             // This method will be call automatically _after_ return from body().
         }
+
+void SerialReceiveBytes::nextString(const std::string &s){
+	        //process string
+			//cout<<"Received:" << s;
+			uint8_t val = stoi(s);
+			if((val & sensorMask)>>7){ //ultrasound Sensors
+			uint8_t sensor = val & ultrasoundClearMask;
+			if(sensor == 0 ){ //maximum sent by the proxy
+				sensor = -1;
+			}
+				if((val & ultrasoundMask)>>6){ //ultrasound Front
+					sensorValues[ULTRASOUND_FRONT] = sensor;
+				}
+				else{ //ultrasound Side
+					sensorValues[ULTRASOUND_SIDE] = sensor;
+				}
+			}
+			else{ //infrared and wheel encoder
+				uint8_t sensor = val & infraredMask;
+				sensor = sensor >> 5;
+				val = val & infraredClearMask;
+				if(val == 0){
+					val = -1;
+				}
+				switch(sensor){
+					case 0: //wheel encoder
+						
+						break;
+					case 1: //infrared side 1
+						sensorValues[INFRARED_SIDE_1] = val;
+						break;
+					case 2: //infrared side 2
+						sensorValues[INFRARED_SIDE_2] = val;
+						break;
+					case 3: //infrared back
+						sensorValues[INFRARED_BACK] = val;
+						break;
+				}
+			}
+		}
 		
 		string ArduProxy::makeSteeringCommand(int steering){
 				uint8_t payload = 0x0;
@@ -145,6 +194,17 @@ namespace automotive {
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
 			
+			sensorBoardData.putTo_MapOfDistances(INFRARED_SIDE_1, sensorValues[INFRARED_SIDE_1]);
+			sensorBoardData.putTo_MapOfDistances(INFRARED_SIDE_2, sensorValues[INFRARED_SIDE_2]);			
+			sensorBoardData.putTo_MapOfDistances(INFRARED_BACK, sensorValues[INFRARED_BACK]);
+			sensorBoardData.putTo_MapOfDistances(ULTRASOUND_FRONT, sensorValues[ULTRASOUND_FRONT]);
+			sensorBoardData.putTo_MapOfDistances(ULTRASOUND_SIDE, sensorValues[ULTRASOUND_SIDE]);
+
+			Container cc(sensorBoardData);
+			getConference().send(cc);
+
+
+
 			Container c = kvs.get(automotive::VehicleControl::ID());
 			double steeringValue;
 			automotive::VehicleControl vc = c.getData<VehicleControl>();
