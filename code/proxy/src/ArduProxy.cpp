@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
+#include <sstream>
 #include <ctype.h>
 #include <cstring>
 #include <cmath>
@@ -57,7 +57,7 @@ namespace automotive {
 		int counter = 0;
 		int average_steering = 0;
 
-		uint8_t sensorValues[5];
+		uint8_t sensorValues[6];
 
 		const uint8_t sensorMask = 0x80;
 		const uint8_t ultrasoundMask = 0x40;
@@ -86,8 +86,54 @@ namespace automotive {
         void ArduProxy::tearDown() {
             // This method will be call automatically _after_ return from body().
         }
+        int j = 0;
 
 void SerialReceiveBytes::nextString(const std::string &s){
+	// int sensorArray[6];
+	// int i = 0;
+	// stringstream sensorData(s);
+	
+	// while(sensorData.good() && i < 6){
+	// 	sensorData >> sensorArray[i];
+	// 	++i;
+	// }
+
+	cout << "Start \n";
+
+	vector<int> vect;
+	stringstream ss(s);
+	//int i;
+	string res;
+
+	// while (ss >> i){
+ //        vect.push_back(i);
+
+ //        cout << "J " << j << endl;
+
+ //        if (ss.peek() == ',')
+ //            ss.ignore();
+ //    }
+
+	while(std::getline(ss, res, ',')) {
+	    std::cout << res << '\n';
+	}
+
+  //  for (i=0; i< 6; i++){
+  //      sensorValues[i] = vect.at(i);
+  //  }
+
+	// sensorValues[ULTRASOUND_SIDE] = vect.at(0);
+	// sensorValues[ULTRASOUND_FRONT] = vect.at(1);
+	// sensorValues[INFRARED_SIDE_1] = vect.at(2);
+	// sensorValues[INFRARED_SIDE_2] = vect.at(3);
+	// sensorValues[INFRARED_BACK] = vect.at(4);
+	// sensorValues[WHEEL_ENCODER] = j;
+	// j++;
+//}
+	cout << "End \n";
+	
+	
+/**
 	        //process string
 			cout<<"Received:" << s;
 			uint8_t val = stoi(s);
@@ -127,6 +173,7 @@ void SerialReceiveBytes::nextString(const std::string &s){
 						break;
 				}
 			}
+			*/
 		}
 		
 		string ArduProxy::makeSteeringCommand(int steering){
@@ -188,6 +235,13 @@ void SerialReceiveBytes::nextString(const std::string &s){
             try {			
                 std::shared_ptr<SerialPort> serial(SerialPortFactory::createSerialPort(SEND_SERIAL_PORT, BAUD_RATE));
 
+        	SerialReceiveBytes handler;
+        	serial->setStringListener(&handler);
+
+        	// Start receiving bytes.
+        	serial->start();
+
+
 			cout<<"Serial port created."<<endl;
 			
 			//delay for the serial to connect
@@ -219,7 +273,7 @@ void SerialReceiveBytes::nextString(const std::string &s){
 			steeringValue = vc.getSteeringWheelAngle();
 			desired_steering= (int)floor(steeringValue*(180/3.14)*-1);
 			//desired_speed = vc.getSpeed();
-			cout<<"Steering:" << desired_steering<<endl;
+		//untake	cout<<"Steering:" << desired_steering<<endl;
 			//cout<<"Speed:"<<desired_speed<<endl;
 			
 			if(counter == 3){
@@ -232,7 +286,7 @@ void SerialReceiveBytes::nextString(const std::string &s){
 					average_steering = -30;
 				}
 				serial->send(makeSteeringCommand(average_steering));
-				cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
+	//untake			cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
 				average_steering = 0;
 				counter = 0;
 			}
@@ -252,4 +306,3 @@ void SerialReceiveBytes::nextString(const std::string &s){
 
     }
 } // automotive::miniature
-
