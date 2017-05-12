@@ -64,18 +64,18 @@ services:
     network_mode: host
     ipc: host
     devices:
-      - "/dev/ttyACM1:/dev/ttyACM1"
+      - "/dev/ttyACM0:/dev/ttyACM0"
     command: "/opt/opendlv.scaledcars/bin/miniature/ardu-proxy
       --cid=111
       --freq=${FREQ}"
 
 
   # sidewaysparker
-  # sidewaysparker:
-  #   image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
-  #   user: odv
-  #   network_mode: host
-  #   ipc: host
-  #   command: "/opt/opendlv.scaledcars/bin/miniature/sidewaysparker
-  #     --cid=111
-  #     --freq=${FREQ}"
+  sidewaysparker:
+     image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+     user: odv
+     network_mode: host
+     ipc: host
+     command: "/opt/opendlv.scaledcars/bin/miniature/sidewaysparker
+       --cid=111
+      --freq=${FREQ}"

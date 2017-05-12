@@ -49,7 +49,7 @@ namespace automotive {
 		
 		const string SEND_SERIAL_PORT = "/dev/ttyACM0"; 
         const string RECEIVE_SERIAL_PORT = "/dev/ttyACM0";
-        const uint32_t BAUD_RATE = 9600;
+        const uint32_t BAUD_RATE = 115200;
 		
 		int desired_steering = 0;
 		int desired_speed = 8;
@@ -57,7 +57,7 @@ namespace automotive {
 		int counter = 0;
 		int average_steering = 0;
 
-		uint8_t sensorValues[6];
+		int sensorValues[6];
 
 		const uint8_t sensorMask = 0x80;
 		const uint8_t ultrasoundMask = 0x40;
@@ -86,51 +86,51 @@ namespace automotive {
         void ArduProxy::tearDown() {
             // This method will be call automatically _after_ return from body().
         }
-        int j = 0;
 
 void SerialReceiveBytes::nextString(const std::string &s){
-	// int sensorArray[6];
-	// int i = 0;
-	// stringstream sensorData(s);
-	
-	// while(sensorData.good() && i < 6){
-	// 	sensorData >> sensorArray[i];
-	// 	++i;
-	// }
-
-	cout << "Start \n";
 
 	vector<int> vect;
 	stringstream ss(s);
-	//int i;
+	int i;
 	string res;
+	int vCount = 0;
+	bool vPoint = false;
 
-	// while (ss >> i){
- //        vect.push_back(i);
+	while (ss >> i){
+        vect.push_back(i);
 
- //        cout << "J " << j << endl;
+        if (ss.peek() == ','){
+        	vCount++;
+        	ss.ignore();
+        }
+      	if (ss.peek() == '.')
+      		vPoint = true;
+    }
 
- //        if (ss.peek() == ',')
- //            ss.ignore();
- //    }
-
-	while(std::getline(ss, res, ',')) {
-	    std::cout << res << '\n';
-	}
-
-  //  for (i=0; i< 6; i++){
-  //      sensorValues[i] = vect.at(i);
-  //  }
-
-	// sensorValues[ULTRASOUND_SIDE] = vect.at(0);
-	// sensorValues[ULTRASOUND_FRONT] = vect.at(1);
-	// sensorValues[INFRARED_SIDE_1] = vect.at(2);
-	// sensorValues[INFRARED_SIDE_2] = vect.at(3);
-	// sensorValues[INFRARED_BACK] = vect.at(4);
-	// sensorValues[WHEEL_ENCODER] = j;
-	// j++;
-//}
-	cout << "End \n";
+   if (vCount == 5 && vPoint == true){
+		sensorValues[0] = vect.at(0);
+		sensorValues[1] = vect.at(1);
+		
+		if(vect.at(2) <= 0 || vect.at(2) > 23){
+			sensorValues[2] = -1;
+		}else{
+			sensorValues[2] = vect.at(2);
+		}
+		
+		if(vect.at(3) <= 0 || vect.at(3) > 23){
+			sensorValues[3] = -1;
+		}else{
+			sensorValues[3] = vect.at(3);
+		}
+		
+		if(vect.at(4) <= 0 || vect.at(4) > 23){
+			sensorValues[4] = -1;
+		}else{
+			sensorValues[4] = vect.at(4);
+		}
+		
+		sensorValues[5] = vect.at(5);
+   }
 	
 	
 /**
