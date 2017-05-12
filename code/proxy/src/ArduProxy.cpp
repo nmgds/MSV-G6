@@ -95,7 +95,7 @@ namespace automotive {
 
 void SerialReceiveBytes::nextString(const std::string &s){
 	        //process string
-			//cout<<"Received:" << s;
+			cout<<"Received:" << s;
 			uint8_t val = stoi(s);
 			if((val & sensorMask)>>7){ //ultrasound Sensors
 			uint8_t sensor = val & ultrasoundClearMask;

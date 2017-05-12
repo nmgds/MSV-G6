@@ -58,7 +58,7 @@
             odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode Overtaker::body() {
 
                  KeyValueConfiguration kv = getKeyValueConfiguration();
-                const bool sim = kv.getValue<uint32_t>("global.simulation");
+              const bool sim = kv.getValue<uint32_t>("global.simulation");
                 
                 int32_t ULTRASONIC_FRONT_CENTER;
                 int32_t ULTRASONIC_FRONT_RIGHT;
@@ -66,6 +66,7 @@
                 int32_t INFRARED_REAR_RIGHT;
 
                 double OVERTAKING_DISTANCE;
+
                 //const double HEADING_PARALLEL = 0.04;
 
                 if(sim == 0) { //todo: fine tune the different angles on the wheel and distances for overtake
@@ -99,9 +100,14 @@
                 // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
                 double distanceToObstacle = 0;
                 double distanceToObstacleOld = 0;
+                double usfr;
+                double IR_FR;
+                double IR_RR;
                 
 
+
                 while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
+        
                     // 1. Get most recent vehicle data:
                     Container containerVehicleData = getKeyValueDataStore().get(VehicleData::ID());
                     VehicleData vd = containerVehicleData.getData<VehicleData> ();
@@ -109,6 +115,19 @@
                     // 2. Get most recent sensor board data:
                     Container containerSensorBoardData = getKeyValueDataStore().get(automotive::miniature::SensorBoardData::ID());
                     SensorBoardData sbd = containerSensorBoardData.getData<SensorBoardData> ();
+
+                    //Printing out values from sensors
+                    distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
+                    cerr << " USFC: " << distanceToObstacle << endl;
+                    usfr = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
+                    cerr << " USFR: " << usfr << endl;
+                    IR_FR= sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
+                    cerr << "IR_FR:  " << IR_FR << endl;
+                    IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
+                    cerr << "IF_RR: " << IR_RR << endl;
+
+
+
 
                     // Create vehicle control data.
                     VehicleControl vc;
@@ -124,6 +143,8 @@
                        
                         stageToRightLaneLeftTurn = 0;
                         stageToRightLaneRightTurn = 0;
+                    	
+			
 
                     }
                     else if (stageMoving == TO_LEFT_LANE_LEFT_TURN) {
@@ -202,11 +223,13 @@
                     // Measuring state machine.
                     if (stageMeasuring == FIND_OBJECT_INIT) { 
                                  distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
+                                 cerr << "Object is far: " << distanceToObstacle <<endl;
                         stageMeasuring = FIND_OBJECT;
                         distanceToObstacleOld = distanceToObstacle;
                     }
                     else if (stageMeasuring == FIND_OBJECT) {
                         distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
+                          cerr << "Obstacle is far away: " << distanceToObstacle <<endl;
 
                         // Approaching an obstacle (stationary or driving slower than us).
                         if ( (distanceToObstacle > 0) && (((distanceToObstacleOld - distanceToObstacle) > 0))) {
@@ -240,12 +263,13 @@
                     else if (stageMeasuring == HAVE_BOTH_IR_SAME_DISTANCE) {
                         // Remain in this stage until both IRs have the similar distance to obstacle (i.e. turn car)
                         // and the driven parts of the turn are plausible.
-                        const double IR_FR = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
-                        const double IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
+                        IR_FR = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
+                        IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
                          cerr <<"BOTH SENSORS RLRT--"<< stageToRightLaneRightTurn <<endl;
                          cerr <<"BOTH SENSORS RLFT--"<< stageToRightLaneLeftTurn <<endl;
                          cerr <<"SENSOR FR--"<< IR_FR <<endl;
                          cerr <<"SENSOR RR--"<< IR_RR <<endl;
+
 
                         //if ((fabs(IR_FR - IR_RR) < HEADING_PARALLEL) || (fabs(stageToRightLaneRightTurn - stageToRightLaneLeftTurn +1) < 1)) { //May have to add fabs on turns and add a max limit to difference
                         //if ((fabs(stageToRightLaneRightTurn - stageToRightLaneLeftTurn) < 1)) { //May have to add fabs on turns and add a max limit to difference
@@ -287,10 +311,11 @@
                             stageMeasuring = DISABLE;
                         }
                     }
+               
 
-                    cerr << "State: " << stageMoving << endl;
-                    cerr << "StateMeasuring: " << stageMeasuring << endl;
-
+                    cout << "State: " << stageMoving << endl;
+                    cout << "StateMeasuring: " << stageMeasuring << endl;
+                    //cout << "IR_FR: " < IR_FR << endl;
                     // Only send vehicle data if controlling the vehicle from overtaker
                     if (cs.getStatus() == OVERTAKING){
                         // Create container for finally sending the data.
@@ -298,15 +323,17 @@
                         // Send container.
                         getConference().send(c);
                     }
-                    
+                     
 
                     // Try to send cat status
                     Container cont(cs);
                     getConference().send(cont);
                 }
-
+            
                 return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
             }
+
+
 
         }
     } // automotive::miniature
