@@ -54,8 +54,11 @@ namespace automotive {
 
         // This method will do the main data processing job.
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode SidewaysParker::body() {
-            const double IR_RIGHT_FRONT = 0;
-            //const double WHEEL_ENCODER = 6;
+
+            const double IR_RIGHT_FRONT = 2;
+            const double IR_BACK = 4;
+            const double WHEEL_ENCODER = 5;
+
             double distanceOld = 0;
             double absPathStart = 0;
             double absPathEnd = 0;
@@ -78,10 +81,15 @@ namespace automotive {
                 cout << "3: " << sbd.getValueForKey_MapOfDistances(3) << endl;
                 cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
                 cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
-                cout << "6: " << sbd.getValueForKey_MapOfDistances(6) << endl;
 
                 // Create vehicle control data.
                 VehicleControl vc;
+
+                // vc.setSpeed(6);
+
+                // if (sbd.getValueForKey_MapOfDistances(5) > 10){
+                //     vc.setSpeed(0);
+                // }
 
                 // Moving state machine.
                 if (stageMoving == 0) {

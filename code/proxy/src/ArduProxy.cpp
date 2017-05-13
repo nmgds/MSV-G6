@@ -52,7 +52,7 @@ namespace automotive {
         const uint32_t BAUD_RATE = 115200;
 		
 		int desired_steering = 0;
-		int desired_speed = 8;
+		int desired_speed = 0;
 		
 		int counter = 0;
 		int average_steering = 0;
@@ -248,7 +248,7 @@ void SerialReceiveBytes::nextString(const std::string &s){
 			const uint32_t ONE_SECOND = 1000 * 1000;
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);
 			
-			//serial->send(makeMovingCommand(desired_speed));
+			serial->send(makeMovingCommand(desired_speed));
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);			
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
@@ -272,9 +272,12 @@ void SerialReceiveBytes::nextString(const std::string &s){
 			
 			steeringValue = vc.getSteeringWheelAngle();
 			desired_steering= (int)floor(steeringValue*(180/3.14)*-1);
-			//desired_speed = vc.getSpeed();
-		//untake	cout<<"Steering:" << desired_steering<<endl;
-			//cout<<"Speed:"<<desired_speed<<endl;
+			desired_speed = vc.getSpeed();
+
+			cout<<"Steering:" << desired_steering<<endl;
+			cout<<"Speed:"<<desired_speed<<endl;
+
+			serial->send(makeMovingCommand(desired_speed));	
 			
 			if(counter == 3){
 				average_steering = average_steering / counter;
@@ -286,7 +289,7 @@ void SerialReceiveBytes::nextString(const std::string &s){
 					average_steering = -30;
 				}
 				serial->send(makeSteeringCommand(average_steering));
-	//untake			cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
+				cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
 				average_steering = 0;
 				counter = 0;
 			}
@@ -295,7 +298,8 @@ void SerialReceiveBytes::nextString(const std::string &s){
 				average_steering = average_steering + desired_steering;
 			}
 		}
-	serial->send(makeMovingCommand(0));			
+
+		serial->send(makeMovingCommand(0));			
 			
             }
             catch(string &exception) {
