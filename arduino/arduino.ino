@@ -1,5 +1,6 @@
 #include <Servo.h>
 #include <Smartcar.h>
+
 #define INFRA_SIDE_1_PIN A5
 #define INFRA_SIDE_2_PIN A4
 #define INFRA_BACK_PIN A2
@@ -9,10 +10,14 @@
 #define escPinRC 5
 #define servoPin 9
 #define escPin 6
+#define ODOMETER_PIN 18
+
 Servo steering;
 Servo motors;
 GP2D120 infraSide1, infraSide2, infraBack;
 SRF08 ultrasoundSide, ultrasoundFront;
+Odometer encoder;
+
 int rcControllerFlag;
 int steer;
 int drive;
@@ -43,7 +48,9 @@ void setup() {
   steering.write(60);
   motors.writeMicroseconds(1500);
   attachInterrupt(digitalPinToInterrupt(3), rcControllerInterrupt, RISING);
-  Serial.begin(9600);
+  encoder.attach(ODOMETER_PIN);
+  encoder.begin();
+  Serial.begin(115200);
 }
 void loop() {
   // put your main code here, to run repeatedly:
@@ -78,7 +85,8 @@ void loop() {
     
   }
   */
-
+  sendIRUSValues();
+  delay(10);
 }
 void checkRC() {
 
@@ -173,6 +181,36 @@ void remoteControl() {
   else {
     motors.writeMicroseconds(1500);
   }
+
+}
+
+void sendIRUSValues() {
+
+  int infraSide1Val = infraSide1.getDistance();
+  int infraSide2Val = infraSide2.getDistance();
+  int infraBackVal = infraBack.getDistance();
+  int wheelVal = encoder.getDistance();
+//  int ultrasoundFrontValue = ultrasoundFront.getDistance();
+//  int ultrasoundSideValue = ultrasoundSide.getDistance();
+
+
+//  Serial.print(ultrasoundSide.getDistance());
+//  Serial.print(',');
+//  Serial.print(ultrasoundFront.getDistance());
+//  Serial.print(',');
+  Serial.print('0');
+  Serial.print(',');
+  Serial.print('0');
+  Serial.print(',');
+  Serial.print(infraSide1.getDistance());
+  Serial.print(',');
+  Serial.print(infraSide2.getDistance());
+  Serial.print(',');
+  Serial.print(infraBack.getDistance());
+  Serial.print(',');
+  Serial.print(encoder.getDistance());
+  Serial.print('.');
+  Serial.print('\n');
 
 }
 
