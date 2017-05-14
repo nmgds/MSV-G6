@@ -108,9 +108,20 @@ void SerialReceiveBytes::nextString(const std::string &s){
     }
 
    if (vCount == 5 && vPoint == true){
-		sensorValues[0] = vect.at(0);
-		sensorValues[1] = vect.at(1);
-		
+
+		if(vect.at(0) <= 0 || vect.at(0) > 55){
+			sensorValues[0] = -1;
+		}else{
+			sensorValues[0] = vect.at(0);
+		}		
+
+		if(vect.at(1) <= 0 || vect.at(1) > 55){
+			sensorValues[1] = -1;
+		}else{
+			sensorValues[1] = vect.at(1);
+		}
+
+
 		if(vect.at(2) <= 0 || vect.at(2) > 23){
 			sensorValues[2] = -1;
 		}else{

@@ -75,17 +75,17 @@
                 //const double HEADING_PARALLEL = 0.04;
 
                 if(simulation == 0) { //todo: fine tune the different angles on the wheel and distances for overtake
-                ULTRASONIC_FRONT_RIGHT = 4;
-                INFRARED_FRONT_RIGHT = 0;
-                INFRARED_REAR_RIGHT = 2;
-                ULTRASONIC_FRONT_CENTER = 3;
+                ULTRASONIC_FRONT_RIGHT = 0;
+                INFRARED_FRONT_RIGHT = 2;
+                INFRARED_REAR_RIGHT = 3;
+                ULTRASONIC_FRONT_CENTER = 1;
                 OVERTAKING_DISTANCE = 9.0; //for a steep left turn 6 seems to be good
             }
                 else {
-                ULTRASONIC_FRONT_RIGHT = 4;
-                INFRARED_FRONT_RIGHT = 0;
-                INFRARED_REAR_RIGHT = 2;
-                ULTRASONIC_FRONT_CENTER = 3;
+                ULTRASONIC_FRONT_RIGHT = 0;
+                INFRARED_FRONT_RIGHT = 2;
+                INFRARED_REAR_RIGHT = 3;
+                ULTRASONIC_FRONT_CENTER = 1;
                 OVERTAKING_DISTANCE = 9.0;
             }
 
@@ -134,7 +134,7 @@
                     IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
                     cerr << "IF_RR: " << IR_RR << endl;
 
-                    
+
                 cout << "0: " << sbd.getValueForKey_MapOfDistances(0) << endl;
                 cout << "1: " << sbd.getValueForKey_MapOfDistances(1) << endl;
                 cout << "2: " << sbd.getValueForKey_MapOfDistances(2) << endl;
