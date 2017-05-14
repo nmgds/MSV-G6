@@ -50,6 +50,7 @@
                 // This method will be call automatically _before_ running body().
                  KeyValueConfiguration kv = getKeyValueConfiguration();
                 simulation = kv.getValue<uint32_t>("global.simulation") == 1;
+                
 
             }
 
@@ -152,7 +153,8 @@
 
                     // Moving state machine.
                     if (stageMoving == FORWARD) {
-                        cs.setStatus(LANE_FOLLOWING);
+                      //  vc.setSpeed(4);
+                     cs.setStatus(LANE_FOLLOWING);
                         // Go forward.
                        
                         stageToRightLaneLeftTurn = 0;
