@@ -38,6 +38,7 @@
             using namespace odcore::data;
             using namespace automotive;
             using namespace automotive::miniature;
+            bool simulation = false;
 
             Overtaker::Overtaker(const int32_t &argc, char **argv) :
                 TimeTriggeredConferenceClientModule(argc, argv, "overtaker") {
@@ -47,6 +48,9 @@
 
             void Overtaker::setUp() {
                 // This method will be call automatically _before_ running body().
+                 KeyValueConfiguration kv = getKeyValueConfiguration();
+                simulation = kv.getValue<uint32_t>("global.simulation") == 1;
+
             }
 
             void Overtaker::tearDown() {
@@ -57,8 +61,9 @@
             // This method will do the main data processing job.
             odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode Overtaker::body() {
 
-                 KeyValueConfiguration kv = getKeyValueConfiguration();
-              const bool sim = kv.getValue<uint32_t>("global.simulation");
+                
+              
+             
                 
                 int32_t ULTRASONIC_FRONT_CENTER;
                 int32_t ULTRASONIC_FRONT_RIGHT;
@@ -69,7 +74,7 @@
 
                 //const double HEADING_PARALLEL = 0.04;
 
-                if(sim == 0) { //todo: fine tune the different angles on the wheel and distances for overtake
+                if(simulation == 0) { //todo: fine tune the different angles on the wheel and distances for overtake
                 ULTRASONIC_FRONT_RIGHT = 4;
                 INFRARED_FRONT_RIGHT = 0;
                 INFRARED_REAR_RIGHT = 2;
@@ -100,6 +105,8 @@
                 // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
                 double distanceToObstacle = 0;
                 double distanceToObstacleOld = 0;
+
+                //Declaring data here for printing them out for tracking sensors data.
                 double usfr;
                 double IR_FR;
                 double IR_RR;
@@ -117,6 +124,7 @@
                     SensorBoardData sbd = containerSensorBoardData.getData<SensorBoardData> ();
 
                     //Printing out values from sensors
+                     cerr << "Simulation :" << simulation << endl;
                     distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
                     cerr << " USFC: " << distanceToObstacle << endl;
                     usfr = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
@@ -126,7 +134,13 @@
                     IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
                     cerr << "IF_RR: " << IR_RR << endl;
 
-
+                    
+                cout << "0: " << sbd.getValueForKey_MapOfDistances(0) << endl;
+                cout << "1: " << sbd.getValueForKey_MapOfDistances(1) << endl;
+                cout << "2: " << sbd.getValueForKey_MapOfDistances(2) << endl;
+                cout << "3: " << sbd.getValueForKey_MapOfDistances(3) << endl;
+                cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
+                cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
 
 
                     // Create vehicle control data.

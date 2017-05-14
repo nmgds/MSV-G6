@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
+#include <sstream>
 #include <ctype.h>
 #include <cstring>
 #include <cmath>
@@ -26,13 +26,11 @@
 
 #include "opendavinci/odcore/base/KeyValueConfiguration.h"
 #include "opendavinci/odcore/data/Container.h"
-#include "opendavinci/odcore/io/conference/ContainerConference.h"
 #include "opendavinci/odcore/data/TimeStamp.h"
 #include <opendavinci/odcore/wrapper/SerialPort.h>
 #include <opendavinci/odcore/base/Thread.h>
 #include <opendavinci/odcore/wrapper/SerialPortFactory.h>
 #include "automotivedata/generated/automotive/VehicleData.h"
-
 
 #include <automotivedata/GeneratedHeaders_AutomotiveData.h>
 #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
@@ -40,28 +38,26 @@
 #include "ArduProxy.h"
 #include "SerialReceiveBytes.hpp"
 
-
-
 namespace automotive {
     namespace miniature {
 
         using namespace std;
         using namespace odcore::base;
         using namespace odcore::data;
-		using namespace odcore::base::module;
         using namespace odtools::recorder;
 		using namespace odcore::wrapper;
 		
 		const string SEND_SERIAL_PORT = "/dev/ttyACM0"; 
-        const uint32_t BAUD_RATE = 9600;
+        const string RECEIVE_SERIAL_PORT = "/dev/ttyACM0";
+        const uint32_t BAUD_RATE = 115200;
 		
 		int desired_steering = 0;
-		int desired_speed = 8;
+		int desired_speed = 0;
 		
 		int counter = 0;
 		int average_steering = 0;
 
-		uint8_t sensorValues[5];
+		int sensorValues[6];
 
 		const uint8_t sensorMask = 0x80;
 		const uint8_t ultrasoundMask = 0x40;
@@ -70,11 +66,11 @@ namespace automotive {
 		const uint8_t ultrasoundClearMask = 0x3F;
 		const uint8_t infraredClearMask = 0x1F;
 
-		enum sensors{INFRARED_SIDE_1, INFRARED_BACK, INFRARED_SIDE_2, ULTRASOUND_FRONT, ULTRASOUND_SIDE};
+		enum sensors{INFRARED_SIDE_1, INFRARED_BACK, INFRARED_SIDE_2, ULTRASOUND_FRONT, ULTRASOUND_SIDE, WHEEL_ENCODER};
 		
         ArduProxy::ArduProxy(const int32_t &argc, char **argv) :
-            TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy"), 
-			sensorBoardData()
+            TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy"),
+            	sensorBoardData()
         {}
 
         ArduProxy::~ArduProxy() {
@@ -89,11 +85,55 @@ namespace automotive {
 
         void ArduProxy::tearDown() {
             // This method will be call automatically _after_ return from body().
-
-		
         }
 
 void SerialReceiveBytes::nextString(const std::string &s){
+
+	vector<int> vect;
+	stringstream ss(s);
+	int i;
+	string res;
+	int vCount = 0;
+	bool vPoint = false;
+
+	while (ss >> i){
+        vect.push_back(i);
+
+        if (ss.peek() == ','){
+        	vCount++;
+        	ss.ignore();
+        }
+      	if (ss.peek() == '.')
+      		vPoint = true;
+    }
+
+   if (vCount == 5 && vPoint == true){
+		sensorValues[0] = vect.at(0);
+		sensorValues[1] = vect.at(1);
+		
+		if(vect.at(2) <= 0 || vect.at(2) > 23){
+			sensorValues[2] = -1;
+		}else{
+			sensorValues[2] = vect.at(2);
+		}
+		
+		if(vect.at(3) <= 0 || vect.at(3) > 23){
+			sensorValues[3] = -1;
+		}else{
+			sensorValues[3] = vect.at(3);
+		}
+		
+		if(vect.at(4) <= 0 || vect.at(4) > 23){
+			sensorValues[4] = -1;
+		}else{
+			sensorValues[4] = vect.at(4);
+		}
+		
+		sensorValues[5] = vect.at(5);
+   }
+	
+	
+/**
 	        //process string
 			cout<<"Received:" << s;
 			uint8_t val = stoi(s);
@@ -113,12 +153,14 @@ void SerialReceiveBytes::nextString(const std::string &s){
 				uint8_t sensor = val & infraredMask;
 				sensor = sensor >> 5;
 				val = val & infraredClearMask;
-				if(val == 0){
-					val = -1;
+				if(sensor!=0){
+					if(val == 0){
+						val = -1;
+					}
 				}
 				switch(sensor){
 					case 0: //wheel encoder
-						
+						sensorValues[WHEEL_ENCODER] = sensorValues[WHEEL_ENCODER] + val;
 						break;
 					case 1: //infrared side 1
 						sensorValues[INFRARED_SIDE_1] = val;
@@ -131,9 +173,8 @@ void SerialReceiveBytes::nextString(const std::string &s){
 						break;
 				}
 			}
+			*/
 		}
-		
-
 		
 		string ArduProxy::makeSteeringCommand(int steering){
 				uint8_t payload = 0x0;
@@ -175,15 +216,13 @@ void SerialReceiveBytes::nextString(const std::string &s){
 					moving = 0 - moving;
 				}
 
-				//set the las t couple of bits with the moving speed
+				//set the last couple of bits with the moving speed
 				payload = payload | moving;
 				
 				//convert to a string to send through the serial
 				convertedPayload = string(1, payload);
 				return convertedPayload;
 		}
-
-
 
 
         // This method will do the main data processing job.
@@ -196,12 +235,12 @@ void SerialReceiveBytes::nextString(const std::string &s){
             try {			
                 std::shared_ptr<SerialPort> serial(SerialPortFactory::createSerialPort(SEND_SERIAL_PORT, BAUD_RATE));
 
+        	SerialReceiveBytes handler;
+        	serial->setStringListener(&handler);
 
-		
+        	// Start receiving bytes.
+        	serial->start();
 
-			SerialReceiveBytes handler;
-			serial->setStringListener(&handler);
-			serial->start();
 
 			cout<<"Serial port created."<<endl;
 			
@@ -209,7 +248,7 @@ void SerialReceiveBytes::nextString(const std::string &s){
 			const uint32_t ONE_SECOND = 1000 * 1000;
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);
 			
-			//serial->send(makeMovingCommand(desired_speed));
+			serial->send(makeMovingCommand(desired_speed));
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);			
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
@@ -219,6 +258,8 @@ void SerialReceiveBytes::nextString(const std::string &s){
 			sensorBoardData.putTo_MapOfDistances(INFRARED_BACK, sensorValues[INFRARED_BACK]);
 			sensorBoardData.putTo_MapOfDistances(ULTRASOUND_FRONT, sensorValues[ULTRASOUND_FRONT]);
 			sensorBoardData.putTo_MapOfDistances(ULTRASOUND_SIDE, sensorValues[ULTRASOUND_SIDE]);
+			sensorBoardData.putTo_MapOfDistances(WHEEL_ENCODER, sensorValues[WHEEL_ENCODER]);
+
 
 			Container cc(sensorBoardData);
 			getConference().send(cc);
@@ -231,9 +272,12 @@ void SerialReceiveBytes::nextString(const std::string &s){
 			
 			steeringValue = vc.getSteeringWheelAngle();
 			desired_steering= (int)floor(steeringValue*(180/3.14)*-1);
-			//desired_speed = vc.getSpeed();
+			desired_speed = vc.getSpeed();
+
 			cout<<"Steering:" << desired_steering<<endl;
-			//cout<<"Speed:"<<desired_speed<<endl;
+			cout<<"Speed:"<<desired_speed<<endl;
+
+			serial->send(makeMovingCommand(desired_speed));	
 			
 			if(counter == 3){
 				average_steering = average_steering / counter;
@@ -254,10 +298,8 @@ void SerialReceiveBytes::nextString(const std::string &s){
 				average_steering = average_steering + desired_steering;
 			}
 		}
-	serial->send(makeMovingCommand(0));	
-	//stop the serial
-	serial->stop();
-	serial->setStringListener(NULL);		
+
+		serial->send(makeMovingCommand(0));			
 			
             }
             catch(string &exception) {
@@ -268,4 +310,3 @@ void SerialReceiveBytes::nextString(const std::string &s){
 
     }
 } // automotive::miniature
-

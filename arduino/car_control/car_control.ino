@@ -1,5 +1,6 @@
 #include <Servo.h>
 #include <Smartcar.h>
+
 #define INFRA_SIDE_1_PIN A5
 #define INFRA_SIDE_2_PIN A4
 #define INFRA_BACK_PIN A2
@@ -9,10 +10,20 @@
 #define escPinRC 5
 #define servoPin 9
 #define escPin 6
+#define ODOMETER_PIN 18
+#define TRIGGER_PIN_SENSOR_FRONT 12
+#define ECHO_PIN_SENSOR_FRONT 13
+#define TRIGGER_PIN_SENSOR_SIDE 7
+#define ECHO_PIN_SENSOR_SIDE 8
+
+
 Servo steering;
 Servo motors;
 GP2D120 infraSide1, infraSide2, infraBack;
-SRF08 ultrasoundSide, ultrasoundFront;
+//SRF08 ultrasoundSide, ultrasoundFront;
+SR04 frontSensor, sideSensor;
+Odometer encoder;
+
 int rcControllerFlag;
 int steer;
 int drive;
@@ -38,12 +49,16 @@ void setup() {
   infraSide1.attach(INFRA_SIDE_1_PIN);
   infraSide2.attach(INFRA_SIDE_2_PIN);
   infraBack.attach(INFRA_BACK_PIN);
-  ultrasoundSide.attach(ULTRA_SIDE_PIN);
-  ultrasoundFront.attach(ULTRA_FRONT_PIN);
+  //ultrasoundSide.attach(ULTRA_SIDE_PIN);
+  //ultrasoundFront.attach(ULTRA_FRONT_PIN);
+  frontSensor.attach(TRIGGER_PIN_SENSOR_FRONT,ECHO_PIN_SENSOR_FRONT);
+  sideSensor.attach(TRIGGER_PIN_SENSOR_SIDE, ECHO_PIN_SENSOR_SIDE);
   steering.write(60);
   motors.writeMicroseconds(1500);
   attachInterrupt(digitalPinToInterrupt(3), rcControllerInterrupt, RISING);
-  Serial.begin(9600);
+  encoder.attach(ODOMETER_PIN);
+  encoder.begin();
+  Serial.begin(115200);
 }
 void loop() {
   // put your main code here, to run repeatedly:
@@ -78,7 +93,8 @@ void loop() {
     
   }
   */
-
+  sendIRUSValues();
+  delay(10);
 }
 void checkRC() {
 
@@ -175,5 +191,37 @@ void remoteControl() {
   }
 
 }
+
+void sendIRUSValues() {
+
+  int infraSide1Val = infraSide1.getDistance();
+  int infraSide2Val = infraSide2.getDistance();
+  int infraBackVal = infraBack.getDistance();
+  int wheelVal = encoder.getDistance();
+//  int ultrasoundFrontValue = frontSensor.getDistance();
+//  int ultrasoundSideValue = ultrasoundSide.getDistance();
+
+
+//  Serial.print(ultrasoundSide.getDistance());
+//  Serial.print(',');
+//  Serial.print(ultrasoundFront.getDistance());
+//  Serial.print(',');
+
+  Serial.print(sideSensor.getDistance());
+  Serial.print(',');
+  Serial.print(frontSensor.getDistance());
+  Serial.print(',');
+  Serial.print(infraSide1.getDistance());
+  Serial.print(',');
+  Serial.print(infraSide2.getDistance());
+  Serial.print(',');
+  Serial.print(infraBack.getDistance());
+  Serial.print(',');
+  Serial.print(encoder.getDistance());
+  Serial.print('.');
+  Serial.print('\n');
+
+}
+
 
 
