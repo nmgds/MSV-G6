@@ -26,6 +26,7 @@
 
 #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 #include "automotivedata/GeneratedHeaders_AutomotiveData.h"
+#include <opendavinci/odcore/base/Thread.h>
 
 #include "SidewaysParker.h"
 
@@ -59,25 +60,35 @@ namespace automotive {
            //const double IR_RIGHT_BACK = 3;
 			//const double IR_BACK = 4;
             const double WHEEL_ENCODER = 5;
-
+/*
             double distanceOld = 0;
             double absPathStart = 0;
             double absPathEnd = 0;
-
-			enum ParkingState {START, GO_FORWARD, READY_TO_PARK, TURN_RIGHT, TURN_LEFT, STOP};
+			*/
+			int lastEncoderValue = 0;
+			int freeSpaceCounter = 0;
+			
+			enum ParkingState {START, GO_FORWARD, READY_TO_PARK, TURN_RIGHT, WAITING, TURN_LEFT, STOP};
 			enum MeasuringState {START_MEASURING, GAP_BEGIN, GAP_END};
 			
-            ParkingState stageMoving = START;
-			MeasuringState stageMeasuring = START_MEASURING;
+            ParkingState stageMoving = TURN_RIGHT;
+			//MeasuringState stageMeasuring = START_MEASURING;
 			
 			
+			uint8_t encoderVal = 0;
+			
+			int speedForward = 8;
+			int speedBackward = -27;
+			int counter = 0;
 			int startParking = 0;
 
             while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
+				
                 // 1. Get most recent vehicle data:
                 Container containerVehicleData = getKeyValueDataStore().get(automotive::VehicleData::ID());
                 VehicleData vd = containerVehicleData.getData<VehicleData> ();
-
+				//encoderVal = vd.getAbsTraveledPath();
+				
                 // 2. Get most recent sensor board data:
                 Container containerSensorBoardData = getKeyValueDataStore().get(automotive::miniature::SensorBoardData::ID());
                 SensorBoardData sbd = containerSensorBoardData.getData<SensorBoardData> ();
@@ -88,6 +99,7 @@ namespace automotive {
                 cout << "3: " << sbd.getValueForKey_MapOfDistances(3) << endl;
                 cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
                 cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
+				cout << "State: " << stageMoving << endl;
 
                 // Create vehicle control data.
                 VehicleControl vc;
@@ -98,42 +110,58 @@ namespace automotive {
                 //     vc.setSpeed(0);
                 // }
 
+				encoderVal = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
                 // Moving state machine.
                 
 				if(stageMoving == START){
 					vc.setSteeringWheelAngle(0);
-					vc.setSpeed(8);
-					if(sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) > 2){
+					vc.setSpeed(speedForward);
+					if(encoderVal > 2){
 						stageMoving = GO_FORWARD;
 					}
 				}
 				if(stageMoving == GO_FORWARD){
 					vc.setSteeringWheelAngle(0);
-					vc.setSpeed(6);
+					vc.setSpeed(speedForward);
 				}
 				if(stageMoving == READY_TO_PARK){
-					vc.setSpeed(4);
+					vc.setSpeed(speedForward);
 					vc.setSteeringWheelAngle(0);					
-					if(sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - startParking > 3){
+					if(encoderVal - startParking > 3){
 						vc.setSpeed(0);
 						vc.setSteeringWheelAngle(0);
-						startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+						startParking = encoderVal;
 						stageMoving = TURN_RIGHT;
+						counter = 0;
 					}
 				}
 				if(stageMoving == TURN_RIGHT){
 					vc.setSteeringWheelAngle(30);
-					vc.setSpeed(-29);
-					if(sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - startParking > 4){
-						stageMoving = TURN_LEFT;
-						startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+					vc.setSpeed(speedBackward);
+					counter++;
+					//if(encoderVal - startParking > 3){
+					if(counter > 40){
+						stageMoving = WAITING;
+						startParking = encoderVal;
+						counter = 0;
 					}
 				}
+				if(stageMoving == WAITING){
+					counter++;
+					startParking = encoderVal;
+					if(counter > 15){
+						counter = 0;
+						stageMoving = TURN_LEFT;
+					}
+				}
+				
 				if(stageMoving == TURN_LEFT){
 					vc.setSteeringWheelAngle(-30);
-					vc.setSpeed(-20);
-					if(sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - startParking > 3){
+					vc.setSpeed(speedBackward);
+					counter++;
+					//if(encoderVal - startParking > 3){
+					  if(counter > 40 || (sbd.getValueForKey_MapOfDistances(4)>0 && sbd.getValueForKey_MapOfDistances(4) < 15)){
 						stageMoving = STOP;
 					}
 					
@@ -148,15 +176,27 @@ namespace automotive {
 					
 				}
 				if(stageMoving == STOP){
-						vc.setSteeringWheelAngle(0);
-						vc.setSpeed(0);
+					vc.setSteeringWheelAngle(0);
+					vc.setSpeed(0);
+				}
+				
+				if(sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0 && stageMoving == GO_FORWARD){
+					freeSpaceCounter =  freeSpaceCounter + (encoderVal - lastEncoderValue); 
+				}else{
+					freeSpaceCounter = 0;
+				}
+				
+				if(freeSpaceCounter > 6 && stageMoving == GO_FORWARD){
+					stageMoving = READY_TO_PARK;
 				}
 				
 				
+				lastEncoderValue = encoderVal;
 				
 				
 				
-
+				
+				/*
                 // Measuring state machine.
                 switch (stageMeasuring) {
                     case START_MEASURING:
@@ -196,7 +236,9 @@ namespace automotive {
                         }
                     break;
                 }
-
+				*/
+				
+				
                 // Create container for finally sending the data.
                 Container c(vc);
                 // Send container.

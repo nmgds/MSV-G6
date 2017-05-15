@@ -60,7 +60,6 @@ namespace automotive {
 		int average_steering = 0;
 
 		int sensorValues[6];
-
 		const uint8_t sensorMask = 0x80;
 		const uint8_t ultrasoundMask = 0x40;
 		const uint8_t infraredMask = 0x60;
