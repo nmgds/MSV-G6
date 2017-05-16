@@ -23,11 +23,12 @@
 
 #include "opendavinci/odcore/io/conference/ContainerConference.h"
 #include "opendavinci/odcore/data/Container.h"
-
+#
 #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 #include "automotivedata/GeneratedHeaders_AutomotiveData.h"
 #include <opendavinci/odcore/base/Thread.h>
 
+#include "opendavinci/odcore/base/KeyValueConfiguration.h"
 #include "SidewaysParker.h"
 
 namespace automotive {
@@ -65,22 +66,37 @@ namespace automotive {
             double absPathStart = 0;
             double absPathEnd = 0;
 			*/
+			
+			KeyValueConfiguration kv = getKeyValueConfiguration();
+			//const int speedForward = kv.getValue<int32_t>("proxy-camera.camera.width");
+			const int speedForward = kv.getValue<int32_t>("sidewaysparker.speedForward");
+			const int speedBackward = kv.getValue<int32_t>("sidewaysparker.speedBack");
+			const int COUNTER_MAX = kv.getValue<int32_t>("sidewaysparker.timer");
+			const int GAP_SIZE = kv.getValue<int32_t>("sidewaysparker.gapSize");
+			const int FIRST_TURN = kv.getValue<int32_t>("sidewaysparker.firstTurn");
+			const int SECOND_TURN = kv.getValue<int32_t>("sidewaysparker.secondTurn");
+			const int TRANSITION_VALUE = kv.getValue<int32_t>("sidewaysparker.transition");
+			//const int STARTING_STAGE = kv.getValue<int32_t>("sidewaysparker.startstage");
+			
+			int counter = 0;
+			int startParking = 0;
+			
+			
+			
 			int lastEncoderValue = 0;
 			int freeSpaceCounter = 0;
 			
-			enum ParkingState {START, GO_FORWARD, READY_TO_PARK, TURN_RIGHT, WAITING, TURN_LEFT, STOP};
+			enum ParkingState {START, GO_FORWARD, READY_TO_PARK, TURN_RIGHT, WAITING_ONE, TRANSITION, WAITING_TWO, TURN_LEFT, STOP};
 			enum MeasuringState {START_MEASURING, GAP_BEGIN, GAP_END};
 			
-            ParkingState stageMoving = TURN_RIGHT;
+            ParkingState stageMoving = START;
 			//MeasuringState stageMeasuring = START_MEASURING;
 			
 			
 			uint8_t encoderVal = 0;
 			
-			int speedForward = 8;
-			int speedBackward = -27;
-			int counter = 0;
-			int startParking = 0;
+			
+			
 
             while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
 				
@@ -109,7 +125,7 @@ namespace automotive {
                 // if (sbd.getValueForKey_MapOfDistances(5) > 10){
                 //     vc.setSpeed(0);
                 // }
-
+				int readyToPark = 0;
 				encoderVal = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
                 // Moving state machine.
@@ -126,42 +142,62 @@ namespace automotive {
 					vc.setSpeed(speedForward);
 				}
 				if(stageMoving == READY_TO_PARK){
-					vc.setSpeed(speedForward);
-					vc.setSteeringWheelAngle(0);					
-					if(encoderVal - startParking > 3){
-						vc.setSpeed(0);
-						vc.setSteeringWheelAngle(0);
-						startParking = encoderVal;
-						stageMoving = TURN_RIGHT;
-						counter = 0;
+					if(encoderVal - readyToPark > 8){
+						vc.setSpeed(speedBackward + 2);
+						vc.setSteeringWheelAngle(30);
+						counter++;
+						if(counter > COUNTER_MAX){
+							stageMoving = TURN_RIGHT;
+							counter = 0;
+							startParking = encoderVal;
+						}
+						
 					}
 				}
 				if(stageMoving == TURN_RIGHT){
 					vc.setSteeringWheelAngle(30);
 					vc.setSpeed(speedBackward);
 					counter++;
-					//if(encoderVal - startParking > 3){
-					if(counter > 40){
-						stageMoving = WAITING;
+					if(encoderVal - startParking > FIRST_TURN){
+					//if(counter > COUNTER_MAX){
+						stageMoving = WAITING_ONE;
 						startParking = encoderVal;
 						counter = 0;
 					}
 				}
-				if(stageMoving == WAITING){
+				if(stageMoving == WAITING_ONE){
 					counter++;
+					vc.setSpeed((speedForward / 2) + 1);
 					startParking = encoderVal;
-					if(counter > 15){
+					if(counter > COUNTER_MAX){
 						counter = 0;
 						stageMoving = TURN_LEFT;
 					}
 				}
-				
+				if(stageMoving == TRANSITION){
+					vc.setSpeed(speedBackward);
+					vc.setSteeringWheelAngle(0);
+					if(encoderVal - startParking > TRANSITION_VALUE){
+						startParking = encoderVal;
+						counter = 0;
+						stageMoving = WAITING_TWO;
+					}
+				}
+				if(stageMoving == WAITING_TWO){
+					counter++;
+					vc.setSpeed((speedForward / 2) + 1);
+					startParking = encoderVal;
+					if(counter > COUNTER_MAX){
+						counter = 0;
+						stageMoving = TURN_LEFT;
+					}
+				}
 				if(stageMoving == TURN_LEFT){
 					vc.setSteeringWheelAngle(-30);
 					vc.setSpeed(speedBackward);
 					counter++;
-					//if(encoderVal - startParking > 3){
-					  if(counter > 40 || (sbd.getValueForKey_MapOfDistances(4)>0 && sbd.getValueForKey_MapOfDistances(4) < 15)){
+					if(encoderVal - startParking > SECOND_TURN){
+					  //if(counter > 40){
 						stageMoving = STOP;
 					}
 					
@@ -186,7 +222,9 @@ namespace automotive {
 					freeSpaceCounter = 0;
 				}
 				
-				if(freeSpaceCounter > 6 && stageMoving == GO_FORWARD){
+				if(freeSpaceCounter > GAP_SIZE && stageMoving == GO_FORWARD){
+					counter = 0;
+					readyToPark = encoderVal;
 					stageMoving = READY_TO_PARK;
 				}
 				
