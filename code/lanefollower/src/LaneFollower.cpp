@@ -147,11 +147,11 @@ namespace automotive {
             double e = 0;
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
-            const int32_t distance = 220;
+            const int32_t distance = 100;
 
             TimeStamp beforeImageProcessing;
-            for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
-                
+            //for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
+              for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
                 // Search from middle to the right:
                 CvScalar pixelRight;
                 CvPoint right;
@@ -178,7 +178,6 @@ namespace automotive {
                     }
                 }
 
-
                 if (m_debug) {
                     if (left.x > 0) {
                     	CvScalar green = CV_RGB(0, 255, 0);
@@ -196,9 +195,11 @@ namespace automotive {
                         sstr << (right.x - m_image->width/2);
                     	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 + 100, y - 2), &m_font, red);
                     }
-                }
+                } 
 
                 if (y == CONTROL_SCANLINE) {
+					
+
                     // Calculate the deviation error.
                     
                     if (right.x > 0) {
@@ -273,9 +274,13 @@ namespace automotive {
             //const double Ki = 0.0123123;
 			//const double Kd = 0.00;
 
-		    const double Kp = 1.26;
-            const double Ki = 0.0123123;
-			const double Kd = 0.7;
+	
+			// Get PID data from configuration file
+		    KeyValueConfiguration kva = getKeyValueConfiguration(); 
+	        
+		    const double Kp = kva.getValue<int32_t> ("lanefollower.Kp");
+            const double Ki = kva.getValue<int32_t> ("lanefollower.Ki");
+			const double Kd = kva.getValue<int32_t> ("lanefollower.Kd");
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;
