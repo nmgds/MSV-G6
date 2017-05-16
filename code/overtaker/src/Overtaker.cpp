@@ -70,6 +70,7 @@
                 int32_t ULTRASONIC_FRONT_RIGHT;
                 int32_t INFRARED_FRONT_RIGHT;
                 int32_t INFRARED_REAR_RIGHT;
+                //int32_t WHEELENCODER;
 
                 double OVERTAKING_DISTANCE;
 
@@ -80,14 +81,16 @@
                 INFRARED_FRONT_RIGHT = 2;
                 INFRARED_REAR_RIGHT = 3;
                 ULTRASONIC_FRONT_CENTER = 1;
-                OVERTAKING_DISTANCE = 9.0; //for a steep left turn 6 seems to be good
+                //WHEELENCODER = 5;
+                OVERTAKING_DISTANCE = 40.0; 
             }
                 else {
                 ULTRASONIC_FRONT_RIGHT = 0;
                 INFRARED_FRONT_RIGHT = 2;
                 INFRARED_REAR_RIGHT = 3;
                 ULTRASONIC_FRONT_CENTER = 1;
-                OVERTAKING_DISTANCE = 9.0;
+               // WHEELENCODER = 5;
+                OVERTAKING_DISTANCE = 40.0;
             }
 
 
@@ -99,13 +102,11 @@
                 StateMachineMoving stageMoving = FORWARD;
                 StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
 
-                // State counter for dynamically moving back to right lane. 
-                int32_t stageToRightLaneRightTurn = 0;
-                int32_t stageToRightLaneLeftTurn = 0;
-
                 // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
                 double distanceToObstacle = 0;
                 double distanceToObstacleOld = 0;
+               // int32_t wheelEcoderCurrentValue = 0;;
+                //int32_t wheelEncoderNextValue = 0;
 
                 //Declaring data here for printing them out for tracking sensors data.
                 double usfr;
@@ -156,41 +157,37 @@
                       //  vc.setSpeed(4);
                      cs.setStatus(LANE_FOLLOWING);
                         // Go forward.
-                       
-                        stageToRightLaneLeftTurn = 0;
-                        stageToRightLaneRightTurn = 0;
-                    	
-			
+                  
+                        
+            
 
                     }
                     else if (stageMoving == TO_LEFT_LANE_LEFT_TURN) {
                         cerr << "Changing stage to Left lane Left turn" << endl;
                         // Move to the left lane: Turn left part until both IRs see something.
                         cs.setStatus(OVERTAKING);
-                        vc.setSpeed(0.5);
-                        vc.setSteeringWheelAngle(-0.4);
+                        vc.setSpeed(8);
+                        vc.setSteeringWheelAngle(-0.8);
 
                         // State machine measuring: Both IRs need to see something before leaving this moving state.
-                        if (stageMeasuring != USFR_CLEAR){
+                      /*  if (stageMeasuring != USFR_CLEAR){
                             stageMeasuring = USFR_FIND;
-                        }
-                        
+                        }*/
 
-                        stageToRightLaneRightTurn++;
+                        
+                        stageMeasuring = HAVE_BOTH_IR;
                     }
                     else if (stageMoving == TO_LEFT_LANE_RIGHT_TURN) {
                         cerr << "Changing stage to Left lane Right turn" << endl;
                         // Move to the left lane: Turn right part until both IRs have the same distance to obstacle.
                         cs.setStatus(OVERTAKING);
-                        vc.setSpeed(0.6);
-                        vc.setSteeringWheelAngle(1);
+                        vc.setSpeed(8);
+                        vc.setSteeringWheelAngle(0.6);
 
                         // State machine measuring: Both IRs need to have the same distance before leaving this moving state.
                         //stageMeasuring = HAVE_BOTH_IR_SAME_DISTANCE; 
                         // State machine measuring: Leave state when front right ultrasonic sensor shows no obstacle
                         stageMeasuring = HAVE_BOTH_IR_SAME_DISTANCE; 
-
-                        stageToRightLaneLeftTurn++; // How long were we in this state, i.e. How long we will have to turn left before we go straight again.
                     }
                     else if (stageMoving == CONTINUE_ON_LEFT_LANE) {
                         cerr << "Changing stage to continue on left" << endl;
@@ -205,27 +202,23 @@
                         cerr << "Changing stage to right lane right turn" << endl;
                         // Move to the right lane: Turn right part.
                         cs.setStatus(OVERTAKING);
-                        vc.setSpeed(0.5);
-                        vc.setSteeringWheelAngle(1);
+                        vc.setSpeed(8);
+                        vc.setSteeringWheelAngle(0.6);
 
-                        //stageToRightLaneRightTurn--;
-                        stageToRightLaneRightTurn = stageToRightLaneRightTurn -2; 
-                        cerr <<"RLRT--"<< stageToRightLaneRightTurn <<endl;
 
-                        if (stageToRightLaneRightTurn < 7) { //need only some right turns to come back to Lane follower
+
+                        if (sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT) < 0 && sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT) < 0) { //need only some right turns to come back to Lane follower
                             stageMoving = TO_RIGHT_LANE_LEFT_TURN;
                         }
                     }
                     else if (stageMoving == TO_RIGHT_LANE_LEFT_TURN) {
                         cerr << "Changing stage to right lane Left turn" << endl;
                         // Move to the left lane: Turn left part.
-                        cs.setStatus(OVERTAKING);
-                        vc.setSpeed(0.5);
-                        vc.setSteeringWheelAngle(-0.8);
+                        cs.setStatus(LANE_FOLLOWING);
+                        vc.setSpeed(8);
+                        vc.setSteeringWheelAngle(-0.6);
 
-                        //stageToRightLaneLeftTurn = stageToRightLaneLeftTurn -2;
-                        stageToRightLaneLeftTurn--;
-                        if (stageToRightLaneLeftTurn < 11) {
+                    
                             // Start over.
                             stageMoving = FORWARD;
                             stageMeasuring = FIND_OBJECT_INIT;
@@ -233,7 +226,7 @@
                             distanceToObstacle = 0;
                             distanceToObstacleOld = 0;
 
-                        }
+                        
                     }
 
                     // Measuring state machine.
@@ -270,10 +263,18 @@
                     }
                     else if (stageMeasuring == HAVE_BOTH_IR) {
                         // Remain in this stage until both IRs see something.
-                        if ( (sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT) > 0) && 
-                            (sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT) > 0) ) {
-                            // Turn to right.
+                      /*  wheelEcoderCurrentValue = sbd.getValueForKey_MapOfDistances(WHEELENCODER);
+                        wheelEncoderNextValue = wheelEcoderCurrentValue + 4;
+
+                        if(wheelEcoderCurrentValue > wheelEncoderNextValue){
                             stageMoving = TO_LEFT_LANE_RIGHT_TURN;
+                        }*/
+
+                       if ( IR_RR > 0 && IR_FR > 0){
+                       //(sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT) > 0) && 
+                            //(sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT) > 0) ) {
+                            // Turn to right.
+                           stageMoving = TO_LEFT_LANE_RIGHT_TURN;
                         }
                     }
                     else if (stageMeasuring == HAVE_BOTH_IR_SAME_DISTANCE) {
@@ -281,20 +282,19 @@
                         // and the driven parts of the turn are plausible.
                         IR_FR = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
                         IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
-                         cerr <<"BOTH SENSORS RLRT--"<< stageToRightLaneRightTurn <<endl;
-                         cerr <<"BOTH SENSORS RLFT--"<< stageToRightLaneLeftTurn <<endl;
+                
                          cerr <<"SENSOR FR--"<< IR_FR <<endl;
                          cerr <<"SENSOR RR--"<< IR_RR <<endl;
 
-
-                        //if ((fabs(IR_FR - IR_RR) < HEADING_PARALLEL) || (fabs(stageToRightLaneRightTurn - stageToRightLaneLeftTurn +1) < 1)) { //May have to add fabs on turns and add a max limit to difference
-                        //if ((fabs(stageToRightLaneRightTurn - stageToRightLaneLeftTurn) < 1)) { //May have to add fabs on turns and add a max limit to difference
-                         //  if ((fabs(IR_FR - IR_RR) < HEADING_PARALLEL) && (fabs(stageToRightLaneLeftTurn - stageToRightLaneRightTurn) > 0)){
-                        //if ((fabs(IR_FR - IR_RR) < HEADING_PARALLEL) || (fabs(stageToRightLaneRightTurn - stageToRightLaneLeftTurn) < 1)){ 
-                        if (((stageToRightLaneRightTurn - stageToRightLaneLeftTurn) < 1)){ 
-                            // Straight forward again.
+                            if ( (IR_FR - IR_RR) < 10 || (IR_RR - IR_FR) < 10){
+                                  // Straight forward again.
                             stageMoving = CONTINUE_ON_LEFT_LANE;
-                        }
+                            }
+
+            
+                          
+                      
+                        
                     }
                      else if (stageMeasuring == USFR_FIND) {
                         // Remain in this stage until front ultrasonic sensor finds obstacle
@@ -316,16 +316,21 @@
                     }
                     else if (stageMeasuring == END_OF_OBJECT) {
                         // Find end of object.
-                        double distFront = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
-                        distanceToObstacle = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT); // When rear sensor sees nothing we are clear to move back
+                       // int32_t distFront = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
+                        //distanceToObstacle = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT); // When rear sensor sees nothing we are clear to move back
 
-                        if ((distanceToObstacle < 0) && (distFront < 0))  {
+                        if (sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT) < 0 && sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT) > 0){
                             // Move to right lane again.
-                            stageMoving = TO_RIGHT_LANE_RIGHT_TURN;
-
+                       /* int32_t wheelEcoderCurrentValue = sbd.getValueForKey_MapOfDistances(WHEELENCODER);
+                        int32_t wheelEncoderNextValue = wheelEcoderCurrentValue + 4;
+                        if (wheelEcoderCurrentValue > wheelEncoderNextValue){*/
+                             stageMoving = TO_RIGHT_LANE_RIGHT_TURN;
+                        }
+                          
+                            cerr <<" We ended object" << stageMeasuring << endl;
                             // Disable measuring until requested from moving state machine again.
                             stageMeasuring = DISABLE;
-                        }
+                        
                     }
                
 
