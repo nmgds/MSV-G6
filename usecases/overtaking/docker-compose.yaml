@@ -1,0 +1,54 @@
+version: '2'
+
+services:
+  # odsupercomponent
+  odsupercomponent:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    network_mode: host
+    volumes:
+      - .:/opt/configuration
+    working_dir: /opt/configuration
+    command: "/opt/od4/bin/odsupercomponent
+      --cid=${CID}
+      --freq=${FREQ}
+      --verbose=1
+      --configuration=/opt/configuration/configuration"
+  
+  # ardu-proxy
+  ardu-proxy:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    user: odv
+    network_mode: host
+    ipc: host
+    depends_on:
+      - odsupercomponent
+    devices:
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    command: "/opt/opendlv.scaledcars/bin/miniature/ardu-proxy
+      --cid=111
+      --freq=${FREQ}"
+
+  # odsimcamera
+  odsimcamera:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    user: odv
+    network_mode: host
+    ipc: host
+    environment:
+      - DISPLAY=$DISPLAY
+    depends_on:
+      - odsupercomponent
+    command: "/opt/od4/bin/odsimcamera
+      --cid=111
+      --freq=${FREQ}"
+
+
+  # overtake
+  overtake:
+     image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+     user: odv
+     network_mode: host
+     ipc: host
+     command: "/opt/opendlv.scaledcars/bin/overtaker
+       --cid=111
+      --freq=${FREQ}"

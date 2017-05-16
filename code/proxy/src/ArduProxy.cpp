@@ -111,14 +111,14 @@ namespace automotive {
 					}
 					break;
 				case 0x04:
-					if(number <= 0 || number >= 20){
+					if(number <= 0 || number >= 30){
 						sensorValues[2] = -1;
 					}else{
 						sensorValues[2] = number;
 					}
 					break;
 				case 0x08:
-					if(number <= 0 || number >= 20){
+					if(number <= 0 || number >= 30){
 						sensorValues[3] = -1;
 					}else{
 						sensorValues[3] = number;

@@ -303,7 +303,7 @@ namespace automotive {
 
 
             // Go forward.
-            m_vehicleControl.setSpeed(2);
+            m_vehicleControl.setSpeed(8);
             m_vehicleControl.setSteeringWheelAngle(desiredSteering);
         }
 
