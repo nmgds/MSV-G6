@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
+#include <sstream>
 #include <ctype.h>
 #include <cstring>
 #include <cmath>
@@ -33,8 +33,10 @@
 #include "automotivedata/generated/automotive/VehicleData.h"
 
 #include <automotivedata/GeneratedHeaders_AutomotiveData.h>
+#include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 
 #include "ArduProxy.h"
+#include "SerialReceiveBytes.hpp"
 
 namespace automotive {
     namespace miniature {
@@ -45,18 +47,31 @@ namespace automotive {
         using namespace odtools::recorder;
 		using namespace odcore::wrapper;
 		
+		const uint8_t sensor = 0x0;
+		
 		const string SEND_SERIAL_PORT = "/dev/ttyACM0"; 
         const string RECEIVE_SERIAL_PORT = "/dev/ttyACM0";
         const uint32_t BAUD_RATE = 9600;
 		
 		int desired_steering = 0;
-		int desired_speed = 8;
+		int desired_speed = 0;
 		
 		int counter = 0;
 		int average_steering = 0;
 
+		int sensorValues[6];
+		const uint8_t sensorMask = 0x80;
+		const uint8_t ultrasoundMask = 0x40;
+		const uint8_t infraredMask = 0x60;
+
+		const uint8_t ultrasoundClearMask = 0x3F;
+		const uint8_t infraredClearMask = 0x1F;
+
+		enum sensors{INFRARED_SIDE_1, INFRARED_BACK, INFRARED_SIDE_2, ULTRASOUND_FRONT, ULTRASOUND_SIDE, WHEEL_ENCODER};
+		
         ArduProxy::ArduProxy(const int32_t &argc, char **argv) :
-            TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy")
+            TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy"),
+            	sensorBoardData()
         {}
 
         ArduProxy::~ArduProxy() {
@@ -66,14 +81,63 @@ namespace automotive {
             // This method will be call automatically _before_ running body().
 
             // Get configuration data.
-            KeyValueConfiguration kv = getKeyValueConfiguration();
-
-           
+            KeyValueConfiguration kv = getKeyValueConfiguration();           
         }
 
         void ArduProxy::tearDown() {
             // This method will be call automatically _after_ return from body().
         }
+
+	void SerialReceiveBytes::nextString(const std::string &s){
+	
+	
+		if(s.length()==4){
+			uint8_t mask = s.at(0);
+			uint8_t number = s.at(1);
+			switch(mask){
+				case 0x01:
+					if(number <= 0 || number >= 55){
+						sensorValues[0] = -1;
+					}else{
+						sensorValues[0] = number;
+					}
+					break;
+				case 0x02:
+					if(number <= 0 || number >= 55){
+						sensorValues[1] = -1;
+					}else{
+						sensorValues[1] = number;
+					}
+					break;
+				case 0x04:
+					if(number <= 0 || number >= 20){
+						sensorValues[2] = -1;
+					}else{
+						sensorValues[2] = number;
+					}
+					break;
+				case 0x08:
+					if(number <= 0 || number >= 20){
+						sensorValues[3] = -1;
+					}else{
+						sensorValues[3] = number;
+					}
+					break;
+				case 0x10:
+					if(number <= 0 || number >= 20){
+						sensorValues[4] = -1;
+					}else{
+						sensorValues[4] = number;
+					}
+					break;
+				case 0x20:
+						sensorValues[5] = number;
+					break;
+				default:
+					break;
+			}
+		}
+	}
 		
 		string ArduProxy::makeSteeringCommand(int steering){
 				uint8_t payload = 0x0;
@@ -134,6 +198,13 @@ namespace automotive {
             try {			
                 std::shared_ptr<SerialPort> serial(SerialPortFactory::createSerialPort(SEND_SERIAL_PORT, BAUD_RATE));
 
+        	SerialReceiveBytes handler;
+        	serial->setStringListener(&handler);
+
+        	// Start receiving bytes.
+        	serial->start();
+
+
 			cout<<"Serial port created."<<endl;
 			
 			//delay for the serial to connect
@@ -145,15 +216,31 @@ namespace automotive {
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
 			
+			sensorBoardData.putTo_MapOfDistances(INFRARED_SIDE_1, sensorValues[INFRARED_SIDE_1]);
+			sensorBoardData.putTo_MapOfDistances(INFRARED_SIDE_2, sensorValues[INFRARED_SIDE_2]);			
+			sensorBoardData.putTo_MapOfDistances(INFRARED_BACK, sensorValues[INFRARED_BACK]);
+			sensorBoardData.putTo_MapOfDistances(ULTRASOUND_FRONT, sensorValues[ULTRASOUND_FRONT]);
+			sensorBoardData.putTo_MapOfDistances(ULTRASOUND_SIDE, sensorValues[ULTRASOUND_SIDE]);
+			sensorBoardData.putTo_MapOfDistances(WHEEL_ENCODER, sensorValues[WHEEL_ENCODER]);
+
+
+			Container cc(sensorBoardData);
+			getConference().send(cc);
+
+
+
 			Container c = kvs.get(automotive::VehicleControl::ID());
 			double steeringValue;
 			automotive::VehicleControl vc = c.getData<VehicleControl>();
 			
 			steeringValue = vc.getSteeringWheelAngle();
 			desired_steering= (int)floor(steeringValue*(180/3.14)*-1);
-			//desired_speed = vc.getSpeed();
+			desired_speed = vc.getSpeed();
+
 			cout<<"Steering:" << desired_steering<<endl;
-			//cout<<"Speed:"<<desired_speed<<endl;
+			cout<<"Speed:"<<desired_speed<<endl;
+
+			serial->send(makeMovingCommand(desired_speed));	
 			
 			if(counter == 3){
 				average_steering = average_steering / counter;
@@ -165,7 +252,7 @@ namespace automotive {
 					average_steering = -30;
 				}
 				serial->send(makeSteeringCommand(average_steering));
-				cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
+				//cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
 				average_steering = 0;
 				counter = 0;
 			}
@@ -174,7 +261,8 @@ namespace automotive {
 				average_steering = average_steering + desired_steering;
 			}
 		}
-	serial->send(makeMovingCommand(0));			
+
+		serial->send(makeMovingCommand(0));			
 			
             }
             catch(string &exception) {
@@ -185,4 +273,3 @@ namespace automotive {
 
     }
 } // automotive::miniature
-

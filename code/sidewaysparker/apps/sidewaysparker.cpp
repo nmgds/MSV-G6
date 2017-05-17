@@ -1,5 +1,6 @@
-/*
- * Copyright (C) 2016 Chalmers
+/**
+ * sidewaysparker - Sample application for realizing a sideways parking car.
+ * Copyright (C) 2012 - 2015 Christian Berger
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,17 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-message chalmersrevere.scaledcars.ExampleMessage [id = 801] {
-    uint32 field1   [id = 1];
+#include "SidewaysParker.h"
+
+int32_t main(int32_t argc, char **argv) {
+    automotive::miniature::SidewaysParker swp(argc, argv);
+    return swp.runModule();
 }
-
-message chalmersrevere.scaledcars.CarStatus [id = 806]{	
-	enum carStatus {
-	LANE_FOLLOWING = 0,
-	OVERTAKING = 1,
-	PARKING = 2,
-	};
-	uint32 status [id = 1];
-}
-
-
