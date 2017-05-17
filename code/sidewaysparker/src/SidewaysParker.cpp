@@ -23,10 +23,12 @@
 
 #include "opendavinci/odcore/io/conference/ContainerConference.h"
 #include "opendavinci/odcore/data/Container.h"
-
+#
 #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 #include "automotivedata/GeneratedHeaders_AutomotiveData.h"
+#include <opendavinci/odcore/base/Thread.h>
 
+#include "opendavinci/odcore/base/KeyValueConfiguration.h"
 #include "SidewaysParker.h"
 
 namespace automotive {
@@ -56,21 +58,53 @@ namespace automotive {
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode SidewaysParker::body() {
 
             const double IR_RIGHT_FRONT = 2;
-            //const double IR_BACK = 4;
+           //const double IR_RIGHT_BACK = 3;
+			//const double IR_BACK = 4;
             const double WHEEL_ENCODER = 5;
-
+/*
             double distanceOld = 0;
             double absPathStart = 0;
             double absPathEnd = 0;
-
-            int stageMoving = 0;
-            int stageMeasuring = 0;
+			*/
+			
+			KeyValueConfiguration kv = getKeyValueConfiguration();
+			//const int speedForward = kv.getValue<int32_t>("proxy-camera.camera.width");
+			const int speedForward = kv.getValue<int32_t>("sidewaysparker.speedForward");
+			const int speedBackward = kv.getValue<int32_t>("sidewaysparker.speedBack");
+			const int COUNTER_MAX = kv.getValue<int32_t>("sidewaysparker.timer");
+			const int GAP_SIZE = kv.getValue<int32_t>("sidewaysparker.gapSize");
+			const int FIRST_TURN = kv.getValue<int32_t>("sidewaysparker.firstTurn");
+			const int SECOND_TURN = kv.getValue<int32_t>("sidewaysparker.secondTurn");
+			const int TRANSITION_VALUE = kv.getValue<int32_t>("sidewaysparker.transition");
+			//const int STARTING_STAGE = kv.getValue<int32_t>("sidewaysparker.startstage");
+			
+			int counter = 0;
+			int startParking = 0;
+			
+			
+			
+			int lastEncoderValue = 0;
+			int freeSpaceCounter = 0;
+			
+			enum ParkingState {START, GO_FORWARD, READY_TO_PARK, TURN_RIGHT, WAITING_ONE, TRANSITION, WAITING_TWO, TURN_LEFT, STOP};
+			enum MeasuringState {START_MEASURING, GAP_BEGIN, GAP_END};
+			
+            ParkingState stageMoving = START;
+			//MeasuringState stageMeasuring = START_MEASURING;
+			
+			
+			uint8_t encoderVal = 0;
+			
+			
+			
 
             while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
+				
                 // 1. Get most recent vehicle data:
                 Container containerVehicleData = getKeyValueDataStore().get(automotive::VehicleData::ID());
                 VehicleData vd = containerVehicleData.getData<VehicleData> ();
-
+				//encoderVal = vd.getAbsTraveledPath();
+				
                 // 2. Get most recent sensor board data:
                 Container containerSensorBoardData = getKeyValueDataStore().get(automotive::miniature::SensorBoardData::ID());
                 SensorBoardData sbd = containerSensorBoardData.getData<SensorBoardData> ();
@@ -81,6 +115,7 @@ namespace automotive {
                 cout << "3: " << sbd.getValueForKey_MapOfDistances(3) << endl;
                 cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
                 cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
+				cout << "State: " << stageMoving << endl;
 
                 // Create vehicle control data.
                 VehicleControl vc;
@@ -90,122 +125,160 @@ namespace automotive {
                 // if (sbd.getValueForKey_MapOfDistances(5) > 10){
                 //     vc.setSpeed(0);
                 // }
+				int readyToPark = 0;
+				encoderVal = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
                 int start = 0;
 
                 // Moving state machine.
-                if (stageMoving == 0) {
-                    // Go forward.
-                    vc.setSpeed(8);
-                    if (sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) > 2){
-                        vc.setSpeed(6);
-                    }
-
-                    vc.setSteeringWheelAngle(0);
-                }
-                if (stageMoving == 1){
-                    vc.setSpeed(6);
-                    start = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
-                    stageMoving = 2;
-                }
-                if (stageMoving == 2){
-                    if ((sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - start) > 2){
-                        vc.setSpeed(-25);
-                        start = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
-                        stageMoving = 3;
-                    }
-                }
-                if (stageMoving == 3){
-                    if ((sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - start) > 2){
-                        vc.setSteeringWheelAngle(25);
-                        start = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
-                        stageMoving = 4;
-                    }
-                }
-                if (stageMoving == 4){
-                    if ((sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - start) > 2){
-                        vc.setSteeringWheelAngle(-25);
-                        vc.setSpeed(0);
-                    }
-                }
-
-                // if ((stageMoving > 0) && (stageMoving < 30)) {
-                //     // Move slightly forward.
-                //     vc.setSpeed(7);
-                //     vc.setSteeringWheelAngle(0);
-                //     stageMoving++;
-                // }
-                // if ((stageMoving >= 30) && (stageMoving < 35)) {
-                //     // Stop.
-                //     vc.setSpeed(0);
-                //     vc.setSteeringWheelAngle(0);
-                //     stageMoving++;
-                // }
-                // if ((stageMoving >= 35) && (stageMoving < 75)) {
-                //     // Backwards, steering wheel to the right.
-                //     vc.setSpeed(-25);
-                //     vc.setSteeringWheelAngle(25);
-                //     stageMoving++;
-                // }
-                // if ((stageMoving >= 75) && (stageMoving < 110)) {
-                //     // Backwards, steering wheel to the left.
-                //     vc.setSpeed(-25);
-                //     vc.setSteeringWheelAngle(-25);
-                //     stageMoving++;
-                // }
-                // if ((stageMoving >= 110)) {
-                //     // Backwards, steering wheel to the left.
-                //     vc.setSpeed(-25);
-                //     vc.setSteeringWheelAngle(0);
-                //     stageMoving++;
-                // }
-                // if ((sbd.getValueForKey_MapOfDistances(IR_BACK) < 3) && (sbd.getValueForKey_MapOfDistances(IR_BACK) > 1)) {
-                //     // Stop.
-                //     vc.setSpeed(0);
-                //     vc.setSteeringWheelAngle(0);
-                // }
-
+                
+				if(stageMoving == START){
+					vc.setSteeringWheelAngle(0);
+					vc.setSpeed(speedForward);
+					if(encoderVal > 2){
+						stageMoving = GO_FORWARD;
+					}
+				}
+				if(stageMoving == GO_FORWARD){
+					vc.setSteeringWheelAngle(0);
+					vc.setSpeed(speedForward);
+				}
+				if(stageMoving == READY_TO_PARK){
+					if(encoderVal - readyToPark > 8){
+						vc.setSpeed(speedBackward + 2);
+						vc.setSteeringWheelAngle(30);
+						counter++;
+						if(counter > COUNTER_MAX){
+							stageMoving = TURN_RIGHT;
+							counter = 0;
+							startParking = encoderVal;
+						}
+						
+					}
+				}
+				if(stageMoving == TURN_RIGHT){
+					vc.setSteeringWheelAngle(30);
+					vc.setSpeed(speedBackward);
+					counter++;
+					if(encoderVal - startParking > FIRST_TURN){
+					//if(counter > COUNTER_MAX){
+						stageMoving = WAITING_ONE;
+						startParking = encoderVal;
+						counter = 0;
+					}
+				}
+				if(stageMoving == WAITING_ONE){
+					counter++;
+					vc.setSpeed((speedForward / 2) + 1);
+					startParking = encoderVal;
+					if(counter > COUNTER_MAX){
+						counter = 0;
+						stageMoving = TURN_LEFT;
+					}
+				}
+				if(stageMoving == TRANSITION){
+					vc.setSpeed(speedBackward);
+					vc.setSteeringWheelAngle(0);
+					if(encoderVal - startParking > TRANSITION_VALUE){
+						startParking = encoderVal;
+						counter = 0;
+						stageMoving = WAITING_TWO;
+					}
+				}
+				if(stageMoving == WAITING_TWO){
+					counter++;
+					vc.setSpeed((speedForward / 2) + 1);
+					startParking = encoderVal;
+					if(counter > COUNTER_MAX){
+						counter = 0;
+						stageMoving = TURN_LEFT;
+					}
+				}
+				if(stageMoving == TURN_LEFT){
+					vc.setSteeringWheelAngle(-30);
+					vc.setSpeed(speedBackward);
+					counter++;
+					if(encoderVal - startParking > SECOND_TURN){
+					  //if(counter > 40){
+						stageMoving = STOP;
+					}
+					
+					
+			//		if((sbd.getValueForKey_MapOfDistances(IR_BACK) > 0 && sbd.getValueForKey_MapOfDistances(IR_BACK) < 15) ){
+//						vc.setSteeringWheelAngle(0);
+//						vc.setSpeed(5);
+//						startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+				//		stageMoving = STOP;
+					//}
+					
+					
+				}
+				if(stageMoving == STOP){
+					vc.setSteeringWheelAngle(0);
+					vc.setSpeed(0);
+				}
+				
+				if(sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0 && stageMoving == GO_FORWARD){
+					freeSpaceCounter =  freeSpaceCounter + (encoderVal - lastEncoderValue); 
+				}else{
+					freeSpaceCounter = 0;
+				}
+				
+				if(freeSpaceCounter > GAP_SIZE && stageMoving == GO_FORWARD){
+					counter = 0;
+					readyToPark = encoderVal;
+					stageMoving = READY_TO_PARK;
+				}
+				
+				
+				lastEncoderValue = encoderVal;
+				
+				
+				
+				
+				/*
                 // Measuring state machine.
                 switch (stageMeasuring) {
-                    case 0:
+                    case START_MEASURING:
                         {
                             // Initialize measurement.
                             distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
-                            stageMeasuring++;
+                            stageMeasuring = GAP_BEGIN;
                         }
                     break;
-                    case 1:
+                    case GAP_BEGIN:
                         {
-                            // Checking for sequence +, -.
                             if ((distanceOld > 0) && (sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0)) {
-                                // Found sequence +, -.
-                                stageMeasuring = 2;
+                                stageMeasuring = GAP_END;
                                 absPathStart = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
                             }
                             distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
                         }
                     break;
-                    case 2:
+                    case GAP_END:
                         {
                             // Checking for sequence -, +.
                             if ((distanceOld < 0) && (sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) > 0)) {
                                 // Found sequence -, +.
-                                stageMeasuring = 1;
+                                stageMeasuring = GAP_BEGIN;
                                 absPathEnd = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
                                 const double GAP_SIZE = (absPathEnd - absPathStart);
 
                                 cerr << "Size = " << GAP_SIZE << endl;
 
-                                if ((stageMoving < 1) && (GAP_SIZE > 5)) {
-                                    stageMoving = 1;
-                                }
+                                if (stageMoving == GO_FORWARD && (GAP_SIZE > 4)) {
+                                    stageMoving = READY_TO_PARK;
+									startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+                               }
                             }
                             distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
                         }
                     break;
                 }
-
+				*/
+				
+				
                 // Create container for finally sending the data.
                 Container c(vc);
                 // Send container.

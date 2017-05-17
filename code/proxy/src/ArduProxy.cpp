@@ -47,9 +47,11 @@ namespace automotive {
         using namespace odtools::recorder;
 		using namespace odcore::wrapper;
 		
+		const uint8_t sensor = 0x0;
+		
 		const string SEND_SERIAL_PORT = "/dev/ttyACM0"; 
         const string RECEIVE_SERIAL_PORT = "/dev/ttyACM0";
-        const uint32_t BAUD_RATE = 115200;
+        const uint32_t BAUD_RATE = 9600;
 		
 		int desired_steering = 0;
 		int desired_speed = 0;
@@ -58,7 +60,6 @@ namespace automotive {
 		int average_steering = 0;
 
 		int sensorValues[6];
-
 		const uint8_t sensorMask = 0x80;
 		const uint8_t ultrasoundMask = 0x40;
 		const uint8_t infraredMask = 0x60;
@@ -87,94 +88,56 @@ namespace automotive {
             // This method will be call automatically _after_ return from body().
         }
 
-void SerialReceiveBytes::nextString(const std::string &s){
-
-	vector<int> vect;
-	stringstream ss(s);
-	int i;
-	string res;
-	int vCount = 0;
-	bool vPoint = false;
-
-	while (ss >> i){
-        vect.push_back(i);
-
-        if (ss.peek() == ','){
-        	vCount++;
-        	ss.ignore();
-        }
-      	if (ss.peek() == '.')
-      		vPoint = true;
-    }
-
-   if (vCount == 5 && vPoint == true){
-		sensorValues[0] = vect.at(0);
-		sensorValues[1] = vect.at(1);
-		
-		if(vect.at(2) <= 0 || vect.at(2) > 23){
-			sensorValues[2] = -1;
-		}else{
-			sensorValues[2] = vect.at(2);
-		}
-		
-		if(vect.at(3) <= 0 || vect.at(3) > 23){
-			sensorValues[3] = -1;
-		}else{
-			sensorValues[3] = vect.at(3);
-		}
-		
-		if(vect.at(4) <= 0 || vect.at(4) > 23){
-			sensorValues[4] = -1;
-		}else{
-			sensorValues[4] = vect.at(4);
-		}
-		
-		sensorValues[5] = vect.at(5);
-   }
+	void SerialReceiveBytes::nextString(const std::string &s){
 	
 	
-/**
-	        //process string
-			cout<<"Received:" << s;
-			uint8_t val = stoi(s);
-			if((val & sensorMask)>>7){ //ultrasound Sensors
-			uint8_t sensor = val & ultrasoundClearMask;
-			if(sensor == 0 ){ //maximum sent by the proxy
-				sensor = -1;
-			}
-				if((val & ultrasoundMask)>>6){ //ultrasound Front
-					sensorValues[ULTRASOUND_FRONT] = sensor;
-				}
-				else{ //ultrasound Side
-					sensorValues[ULTRASOUND_SIDE] = sensor;
-				}
-			}
-			else{ //infrared and wheel encoder
-				uint8_t sensor = val & infraredMask;
-				sensor = sensor >> 5;
-				val = val & infraredClearMask;
-				if(sensor!=0){
-					if(val == 0){
-						val = -1;
+		if(s.length()==4){
+			uint8_t mask = s.at(0);
+			uint8_t number = s.at(1);
+			switch(mask){
+				case 0x01:
+					if(number <= 0 || number >= 55){
+						sensorValues[0] = -1;
+					}else{
+						sensorValues[0] = number;
 					}
-				}
-				switch(sensor){
-					case 0: //wheel encoder
-						sensorValues[WHEEL_ENCODER] = sensorValues[WHEEL_ENCODER] + val;
-						break;
-					case 1: //infrared side 1
-						sensorValues[INFRARED_SIDE_1] = val;
-						break;
-					case 2: //infrared side 2
-						sensorValues[INFRARED_SIDE_2] = val;
-						break;
-					case 3: //infrared back
-						sensorValues[INFRARED_BACK] = val;
-						break;
-				}
+					break;
+				case 0x02:
+					if(number <= 0 || number >= 55){
+						sensorValues[1] = -1;
+					}else{
+						sensorValues[1] = number;
+					}
+					break;
+				case 0x04:
+					if(number <= 0 || number >= 20){
+						sensorValues[2] = -1;
+					}else{
+						sensorValues[2] = number;
+					}
+					break;
+				case 0x08:
+					if(number <= 0 || number >= 20){
+						sensorValues[3] = -1;
+					}else{
+						sensorValues[3] = number;
+					}
+					break;
+				case 0x10:
+					if(number <= 0 || number >= 20){
+						sensorValues[4] = -1;
+					}else{
+						sensorValues[4] = number;
+					}
+					break;
+				case 0x20:
+						sensorValues[5] = number;
+					break;
+				default:
+					break;
 			}
-			*/
 		}
+	}
 		
 		string ArduProxy::makeSteeringCommand(int steering){
 				uint8_t payload = 0x0;

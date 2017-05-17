@@ -374,3 +374,17 @@ proxy-camera.camera.width = 640
 proxy-camera.camera.height = 480
 proxy-camera.camera.bpp=3
 proxy-camera.camera.flipped= 1 #1 = flipped image
+
+###########################################
+#
+# CONFIGURATION FOR SIDEWAYS PARKING
+#
+#
+sidewaysparker.startstage = 3
+sidewaysparker.speedForward = 7
+sidewaysparker.speedBack = -29
+sidewaysparker.gapSize = 6
+sidewaysparker.firstTurn = 3
+sidewaysparker.secondTurn = 2
+sidewaysparker.timer = 20
+sidewaysparker.transition = 0
