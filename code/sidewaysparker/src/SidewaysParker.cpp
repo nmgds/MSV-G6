@@ -145,7 +145,7 @@ namespace automotive {
 				if(stageMoving == GO_FORWARD){
 					// vc.setSteeringWheelAngle(0);
 					// vc.setSpeed(speedForward);
-					cs.setStatus(LANE_FOLLOWING);
+
 				}
 				if(stageMoving == READY_TO_PARK){
 					if(encoderVal - readyToPark > 8){
@@ -289,7 +289,13 @@ namespace automotive {
                 // Send container.
                 getConference().send(c);
 
-                // Try to send cat status
+                // Try to send car status
+				if(stageMoving == GO_FORWARD){
+					cs.setStatus(LANE_FOLLOWING);
+				}
+				else{
+					cs.setStatus(PARKING);
+				}
                 Container cont(cs);
                 getConference().send(cont);
 

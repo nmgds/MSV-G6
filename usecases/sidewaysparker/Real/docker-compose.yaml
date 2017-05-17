@@ -36,8 +36,6 @@ services:
     user: odv
     network_mode: host
     ipc: host
-    depends_on:
-      - odsupercomponent
     devices:
       - "/dev/ttyACM0:/dev/ttyACM0"
     command: "/opt/opendlv.scaledcars/bin/miniature/ardu-proxy
@@ -53,8 +51,7 @@ services:
      ipc: host
      depends_on:
       - odsupercomponent
-      - ardu-proxy
-     command: "/opt/opendlv.scaledcars/bin/miniature/sidewaysparker
+     command: "/opt/opendlv.scaledcars/bin/sidewaysparker
       --cid=111
       --freq=${FREQ}"
 
@@ -68,8 +65,7 @@ services:
       - DISPLAY=$DISPLAY
      depends_on:
       - odsupercomponent
-      - ardu-proxy
-     command: "/opt/opendlv.scaledcars/bin/miniature/lanefollower
+     command: "/opt/opendlv.scaledcars/bin/lanefollower
       --cid=111
       --freq=${FREQ}
       --verbose=1"

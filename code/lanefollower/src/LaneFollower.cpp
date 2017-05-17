@@ -34,6 +34,7 @@
 #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 
 #include "odvdscaledcarsdatamodel/generated/chalmersrevere/scaledcars/CarStatus.h"
+#include "opendavinci/odcore/base/KeyValueConfiguration.h"
 
 #include "LaneFollower.h"
 
@@ -62,6 +63,7 @@ namespace automotive {
             m_eSum(0),
             m_eOld(0),
             m_vehicleControl() {}
+            
 
         LaneFollower::~LaneFollower() {}
 
@@ -283,6 +285,7 @@ namespace automotive {
 		    const double Kp = kva.getValue<int32_t> ("lanefollower.Kp");
             const double Ki = kva.getValue<int32_t> ("lanefollower.Ki");
 			const double Kd = kva.getValue<int32_t> ("lanefollower.Kd");
+	        const int speedForward = kva.getValue<int32_t> ("lanefollower.speedForward");
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;
@@ -308,7 +311,7 @@ namespace automotive {
 
 
             // Go forward.
-            m_vehicleControl.setSpeed(6);
+            m_vehicleControl.setSpeed(speedForward);
             m_vehicleControl.setSteeringWheelAngle(desiredSteering);
         }
 

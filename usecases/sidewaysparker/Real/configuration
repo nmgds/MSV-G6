@@ -391,3 +391,4 @@ sidewaysparker.firstTurn = 3
 sidewaysparker.secondTurn = 2
 sidewaysparker.timer = 20
 sidewaysparker.transition = 0
+lanefollower.speedForward = 7
