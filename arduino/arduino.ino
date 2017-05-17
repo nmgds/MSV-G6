@@ -6,8 +6,8 @@
 #define INFRA_BACK_PIN A2
 #define ULTRA_SIDE_PIN 0x70
 #define ULTRA_FRONT_PIN 0x73
-#define steerPinRC 3
-#define escPinRC 5
+#define steerPinRC 18
+#define escPinRC 19
 #define servoPin 9
 #define escPin 6
 #define ODOMETER_PIN 2
@@ -16,7 +16,6 @@
 #define TRIGGER_PIN_SENSOR_SIDE 7
 #define ECHO_PIN_SENSOR_SIDE 8
 
-
 Servo steering;
 Servo motors;
 GP2D120 infraSide1, infraSide2, infraBack;
@@ -24,28 +23,26 @@ GP2D120 infraSide1, infraSide2, infraBack;
 SR04 frontSensor, sideSensor;
 Odometer encoder;
 
-int rcControllerFlag;
-int steer;
 int drive;
+int steer;
 String input;
 
+byte mask = 31; // mask for 0001 1111
+int steerValue = 60;
+byte steeringAmount;
+int speedValue = 1500;
+byte speedAmount;
 
-  byte mask = 31; // mask for 0001 1111
-  int steerValue = 60;
-  byte steeringAmount;
-  int speedValue = 1500;
-  byte speedAmount;
+int currentSteering = steerValue;
+int currentSpeed = speedValue;
 
-  int currentSteering = steerValue;
-  int currentSpeed = speedValue;
-
-
+boolean useRC = false;
 
 void setup() {
   // put your setup code here, to run once:
   steering.attach(servoPin);
   motors.attach(escPin);
-  rcControllerFlag = 1;
+
   infraSide1.attach(INFRA_SIDE_1_PIN);
   infraSide2.attach(INFRA_SIDE_2_PIN);
   infraBack.attach(INFRA_BACK_PIN);
@@ -57,22 +54,33 @@ void setup() {
   delay(500);
   motors.writeMicroseconds(1500);
   delay(500);
-  attachInterrupt(digitalPinToInterrupt(3), rcControllerInterrupt, RISING);
   encoder.attach(ODOMETER_PIN);
   encoder.begin();
   Serial.begin(9600);
+  attachInterrupt(5, turnOnRC, HIGH); //PIN 18
+  //attachInterrupt(4, remoteControl, RISING); //PIN 19
 }
-void loop() {
-  // put your main code here, to run repeatedly:
-  //checkRC();
- // steer = pulseIn(steerPinRC, HIGH);
- // drive = pulseIn(escPinRC, HIGH);
 
-//  Serial.println(steer);
-//  if (steer == 0)
-//  {    
-    steering.write(currentSteering);
-    motors.writeMicroseconds(currentSpeed);
+void turnOnRC(){
+  detachInterrupt(5);
+  useRC = true;
+  attachInterrupt(5,turnOffRC,LOW);
+}
+
+void turnOffRC(){
+  detachInterrupt(5);
+  currentSteering = 60;
+  currentSpeed = 1500;
+  useRC = false;
+  attachInterrupt(5,turnOnRC,HIGH);
+}
+
+void loop() {
+  while(useRC){
+    remoteControl();
+  }
+   steering.write(currentSteering);
+   motors.writeMicroseconds(currentSpeed);
     
     if(Serial.available() > 0){
       byte cmd = (byte)Serial.read();
@@ -82,31 +90,17 @@ void loop() {
       else{
         moveCar(cmd);
       }
-    }
-  
-//  else {
-//    remoteControl();
-//  }
-/*
-  if(Serial.available() > 0){
-    String cmd = Serial.readStringUntil('\n');
-    steering.write(60+cmd.toInt());
-
-    
-  }
-  */
-  
+    } 
   sendIRUSValues();
-  //delay(10);
+  
+  delay(10);
 }
+
 void checkRC() {
-
   Serial.println(pulseIn(steerPinRC, HIGH, 25000));
-
 }
 
 void steerCar(byte command){
-
   steerValue = 60;
   steeringAmount = command & mask;
 
@@ -126,7 +120,6 @@ void steerCar(byte command){
 }
 
 void moveCar(byte command){
-
   speedValue = 1500;
   speedAmount = command & mask;
 
@@ -145,15 +138,10 @@ void moveCar(byte command){
   currentSpeed = speedValue;
 }
 
-
-
-void rcControllerInterrupt() {
-  rcControllerFlag = 1;
-}
-
 void remoteControl() {
-
-  if (steer <= 1150) {
+  steer = pulseIn(steerPinRC, HIGH);
+  drive = pulseIn(escPinRC, HIGH);
+   if (steer <= 1150) {
     steering.write(90);
   }
   else if (steer <= 1300) {
@@ -187,11 +175,11 @@ void remoteControl() {
   else if (drive > 1600) {
     motors.writeMicroseconds(1630);
   }
-    // the car does not drive
+  // the car does not drive
   else {
     motors.writeMicroseconds(1500);
   }
-
+  
 }
 
 void sendIRUSValues() {
@@ -214,5 +202,3 @@ void sendIRUSValues() {
   Serial.write(encoder.getDistance());
   Serial.print('\n');
 }
-
-
