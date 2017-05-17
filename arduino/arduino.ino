@@ -46,11 +46,14 @@ void setup() {
   ultrasoundSide.attach(ULTRA_SIDE_PIN);
   ultrasoundFront.attach(ULTRA_FRONT_PIN);
   steering.write(60);
+  delay(500);
   motors.writeMicroseconds(1500);
+  delay(500);
   attachInterrupt(digitalPinToInterrupt(3), rcControllerInterrupt, RISING);
   encoder.attach(ODOMETER_PIN);
   encoder.begin();
   Serial.begin(115200);
+  delay(500);
 }
 void loop() {
   // put your main code here, to run repeatedly:
@@ -61,7 +64,7 @@ void loop() {
 //  Serial.println(steer);
 //  if (steer == 0)
 //  {    
-   steering.write(currentSteering);
+    steering.write(currentSteering);
     motors.writeMicroseconds(currentSpeed);
     
     if(Serial.available() > 0){
@@ -85,8 +88,9 @@ void loop() {
     
   }
   */
+  
   sendIRUSValues();
-  delay(10);
+  //delay(10);
 }
 void checkRC() {
 

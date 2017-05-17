@@ -289,7 +289,7 @@ void SerialReceiveBytes::nextString(const std::string &s){
 					average_steering = -30;
 				}
 				serial->send(makeSteeringCommand(average_steering));
-				cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
+				//cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
 				average_steering = 0;
 				counter = 0;
 			}

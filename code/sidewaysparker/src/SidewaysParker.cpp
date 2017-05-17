@@ -56,7 +56,7 @@ namespace automotive {
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode SidewaysParker::body() {
 
             const double IR_RIGHT_FRONT = 2;
-            const double IR_BACK = 4;
+            //const double IR_BACK = 4;
             const double WHEEL_ENCODER = 5;
 
             double distanceOld = 0;
@@ -91,47 +91,79 @@ namespace automotive {
                 //     vc.setSpeed(0);
                 // }
 
+                int start = 0;
+
                 // Moving state machine.
                 if (stageMoving == 0) {
                     // Go forward.
-                    vc.setSpeed(2);
+                    vc.setSpeed(8);
+                    if (sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) > 2){
+                        vc.setSpeed(6);
+                    }
+
                     vc.setSteeringWheelAngle(0);
                 }
-                if ((stageMoving > 0) && (stageMoving < 30)) {
-                    // Move slightly forward.
-                    vc.setSpeed(.3);
-                    vc.setSteeringWheelAngle(0);
-                    stageMoving++;
+                if (stageMoving == 1){
+                    vc.setSpeed(6);
+                    start = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+                    stageMoving = 2;
                 }
-                if ((stageMoving >= 30) && (stageMoving < 35)) {
-                    // Stop.
-                    vc.setSpeed(0);
-                    vc.setSteeringWheelAngle(0);
-                    stageMoving++;
+                if (stageMoving == 2){
+                    if ((sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - start) > 2){
+                        vc.setSpeed(-25);
+                        start = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+                        stageMoving = 3;
+                    }
                 }
-                if ((stageMoving >= 35) && (stageMoving < 75)) {
-                    // Backwards, steering wheel to the right.
-                    vc.setSpeed(-1.6);
-                    vc.setSteeringWheelAngle(25);
-                    stageMoving++;
+                if (stageMoving == 3){
+                    if ((sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - start) > 2){
+                        vc.setSteeringWheelAngle(25);
+                        start = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+                        stageMoving = 4;
+                    }
                 }
-                if ((stageMoving >= 75) && (stageMoving < 110)) {
-                    // Backwards, steering wheel to the left.
-                    vc.setSpeed(-1.2);
-                    vc.setSteeringWheelAngle(-25);
-                    stageMoving++;
+                if (stageMoving == 4){
+                    if ((sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER) - start) > 2){
+                        vc.setSteeringWheelAngle(-25);
+                        vc.setSpeed(0);
+                    }
                 }
-                if ((stageMoving >= 110)) {
-                    // Backwards, steering wheel to the left.
-                    vc.setSpeed(-.5);
-                    vc.setSteeringWheelAngle(0);
-                    stageMoving++;
-                }
-                if ((sbd.getValueForKey_MapOfDistances(1) < 3) && (sbd.getValueForKey_MapOfDistances(1) > 1)) {
-                    // Stop.
-                    vc.setSpeed(0);
-                    vc.setSteeringWheelAngle(0);
-                }
+
+                // if ((stageMoving > 0) && (stageMoving < 30)) {
+                //     // Move slightly forward.
+                //     vc.setSpeed(7);
+                //     vc.setSteeringWheelAngle(0);
+                //     stageMoving++;
+                // }
+                // if ((stageMoving >= 30) && (stageMoving < 35)) {
+                //     // Stop.
+                //     vc.setSpeed(0);
+                //     vc.setSteeringWheelAngle(0);
+                //     stageMoving++;
+                // }
+                // if ((stageMoving >= 35) && (stageMoving < 75)) {
+                //     // Backwards, steering wheel to the right.
+                //     vc.setSpeed(-25);
+                //     vc.setSteeringWheelAngle(25);
+                //     stageMoving++;
+                // }
+                // if ((stageMoving >= 75) && (stageMoving < 110)) {
+                //     // Backwards, steering wheel to the left.
+                //     vc.setSpeed(-25);
+                //     vc.setSteeringWheelAngle(-25);
+                //     stageMoving++;
+                // }
+                // if ((stageMoving >= 110)) {
+                //     // Backwards, steering wheel to the left.
+                //     vc.setSpeed(-25);
+                //     vc.setSteeringWheelAngle(0);
+                //     stageMoving++;
+                // }
+                // if ((sbd.getValueForKey_MapOfDistances(IR_BACK) < 3) && (sbd.getValueForKey_MapOfDistances(IR_BACK) > 1)) {
+                //     // Stop.
+                //     vc.setSpeed(0);
+                //     vc.setSteeringWheelAngle(0);
+                // }
 
                 // Measuring state machine.
                 switch (stageMeasuring) {
@@ -148,7 +180,7 @@ namespace automotive {
                             if ((distanceOld > 0) && (sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0)) {
                                 // Found sequence +, -.
                                 stageMeasuring = 2;
-                                absPathStart = vd.getAbsTraveledPath();
+                                absPathStart = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
                             }
                             distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
                         }
@@ -159,13 +191,13 @@ namespace automotive {
                             if ((distanceOld < 0) && (sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) > 0)) {
                                 // Found sequence -, +.
                                 stageMeasuring = 1;
-                                absPathEnd = vd.getAbsTraveledPath();
+                                absPathEnd = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
                                 const double GAP_SIZE = (absPathEnd - absPathStart);
 
                                 cerr << "Size = " << GAP_SIZE << endl;
 
-                                if ((stageMoving < 1) && (GAP_SIZE > 7)) {
+                                if ((stageMoving < 1) && (GAP_SIZE > 5)) {
                                     stageMoving = 1;
                                 }
                             }
