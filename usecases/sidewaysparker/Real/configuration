@@ -234,8 +234,11 @@ lanefollower.debug = 0      # set to 0 to disable any windows and further output
 #
 # CONFIGURATION FOR VCR
 #
-VCR.camera_id = 2 # select here the proper camera
-VCR.debug = 0     # set to 0 to disable any windows and further output
+lanefollower.camera_id = 2 # select here the proper camera
+lanefollower.debug = 1      # set to 0 to disable any windows and further output
+lanefollower.Kp = 1.10
+lanefollower.Ki = 0.02
+lanefollower.Kd = 0.00
 
 
 ###############################################################################
@@ -369,7 +372,7 @@ lanedetector.threshBaseParameter=48
 
 proxy-camera.camera.debug=0 # 1= show recording (Requires X11)
 proxy-camera.camera.name = DocumentationCamera0
-proxy-camera.camera.id = 0 #Select here the proer id for opencv
+proxy-camera.camera.id = 1 #Select here the proer id for opencv
 proxy-camera.camera.width = 640
 proxy-camera.camera.height = 480
 proxy-camera.camera.bpp=3

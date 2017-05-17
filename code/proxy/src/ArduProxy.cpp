@@ -211,7 +211,7 @@ namespace automotive {
 			const uint32_t ONE_SECOND = 1000 * 1000;
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);
 			
-			serial->send(makeMovingCommand(desired_speed));
+			//serial->send(makeMovingCommand(desired_speed));
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);			
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {

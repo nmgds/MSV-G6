@@ -23,10 +23,10 @@
 
 #include "opendavinci/odcore/io/conference/ContainerConference.h"
 #include "opendavinci/odcore/data/Container.h"
-#
+
 #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 #include "automotivedata/GeneratedHeaders_AutomotiveData.h"
-#include <opendavinci/odcore/base/Thread.h>
+#include "odvdscaledcarsdatamodel/generated/chalmersrevere/scaledcars/CarStatus.h"
 
 #include "opendavinci/odcore/base/KeyValueConfiguration.h"
 #include "SidewaysParker.h"
@@ -61,12 +61,13 @@ namespace automotive {
            //const double IR_RIGHT_BACK = 3;
 			//const double IR_BACK = 4;
             const double WHEEL_ENCODER = 5;
-/*
+			/*
             double distanceOld = 0;
             double absPathStart = 0;
             double absPathEnd = 0;
 			*/
 			
+
 			KeyValueConfiguration kv = getKeyValueConfiguration();
 			//const int speedForward = kv.getValue<int32_t>("proxy-camera.camera.width");
 			const int speedForward = kv.getValue<int32_t>("sidewaysparker.speedForward");
@@ -88,8 +89,9 @@ namespace automotive {
 			
 			enum ParkingState {START, GO_FORWARD, READY_TO_PARK, TURN_RIGHT, WAITING_ONE, TRANSITION, WAITING_TWO, TURN_LEFT, STOP};
 			enum MeasuringState {START_MEASURING, GAP_BEGIN, GAP_END};
+			enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
 			
-            ParkingState stageMoving = START;
+            ParkingState stageMoving = GO_FORWARD;
 			//MeasuringState stageMeasuring = START_MEASURING;
 			
 			
@@ -120,28 +122,30 @@ namespace automotive {
                 // Create vehicle control data.
                 VehicleControl vc;
 
-                // vc.setSpeed(6);
+                // Create vehicle status
+                chalmersrevere::scaledcars::CarStatus cs;
 
-                // if (sbd.getValueForKey_MapOfDistances(5) > 10){
-                //     vc.setSpeed(0);
-                // }
+
+          
 				int readyToPark = 0;
 				encoderVal = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
-                int start = 0;
+                //int start = 0;
 
                 // Moving state machine.
                 
-				if(stageMoving == START){
-					vc.setSteeringWheelAngle(0);
-					vc.setSpeed(speedForward);
-					if(encoderVal > 2){
-						stageMoving = GO_FORWARD;
-					}
-				}
+				// if(stageMoving == START){
+				// 	//vc.setSteeringWheelAngle(0);
+				// 	//vc.setSpeed(speedForward);
+				// 	cs.setStatus(LANE_FOLLOWING);
+				// 	// if(encoderVal > 2){
+				// 	// 	stageMoving = GO_FORWARD;
+				// 	// }
+				// }
 				if(stageMoving == GO_FORWARD){
-					vc.setSteeringWheelAngle(0);
-					vc.setSpeed(speedForward);
+					// vc.setSteeringWheelAngle(0);
+					// vc.setSpeed(speedForward);
+					cs.setStatus(LANE_FOLLOWING);
 				}
 				if(stageMoving == READY_TO_PARK){
 					if(encoderVal - readyToPark > 8){
@@ -228,6 +232,7 @@ namespace automotive {
 					counter = 0;
 					readyToPark = encoderVal;
 					stageMoving = READY_TO_PARK;
+					cs.setStatus(PARKING);
 				}
 				
 				
@@ -283,6 +288,12 @@ namespace automotive {
                 Container c(vc);
                 // Send container.
                 getConference().send(c);
+
+                // Try to send cat status
+                Container cont(cs);
+                getConference().send(cont);
+
+
             }
 
             return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;

@@ -57,18 +57,33 @@ SET(OPENCV_ROOT_DIR "/usr")
 FIND_PACKAGE (OpenCV REQUIRED)
 
 ###########################################################################
+
+# Find ODVDScaledCarsDataModel.
+find_package(ODVDScaledCarsDataModel REQUIRED)
+
+###########################################################################
 # Set linking libraries to successfully link test suites and binaries.
 SET (LIBRARIES ${OPENDAVINCI_LIBRARIES} ${AUTOMOTIVEDATA_LIBRARIES} ${OPENCV_LIBRARIES})
 
 ###########################################################################
-# Set header files from OpenDaVINCI.
-INCLUDE_DIRECTORIES (${OPENDAVINCI_INCLUDE_DIRS})
-# Set header files from AutomotiveData.
-INCLUDE_DIRECTORIES (${AUTOMOTIVEDATA_INCLUDE_DIRS})
+
 # Set header files from OpenCV.
-INCLUDE_DIRECTORIES (${OPENCV_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES (SYSTEM ${OpenCV_INCLUDE_DIR})
+# Set header files from ODVDScaledCarsDataModel.
+INCLUDE_DIRECTORIES (SYSTEM ${ODVDSCALEDCARSDATAMODEL_INCLUDE_DIRS})
+# Set header files from OpenDaVINCI.
+INCLUDE_DIRECTORIES (SYSTEM ${OPENDAVINCI_INCLUDE_DIRS})
+# Set header files from AutomotiveData.
+INCLUDE_DIRECTORIES (SYSTEM ${AUTOMOTIVEDATA_INCLUDE_DIRS})
 # Set include directory.
 INCLUDE_DIRECTORIES(include)
+
+# Set libraries to link against.
+set(LIBRARIES ${OPENDAVINCI_LIBRARIES}
+              ${AUTOMOTIVEDATA_LIBRARIES}
+              ${ODVDSCALEDCARSDATAMODEL_LIBRARIES}
+              ${OpenCV_LIBS})
+
 
 ###########################################################################
 # Build this project.
@@ -111,7 +126,11 @@ ENDIF(CXXTEST_FOUND)
 
 ###########################################################################
 # Install this project.
-INSTALL(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin/miniature COMPONENT software)
-# This project does not have a manual page so far.
-#INSTALL(FILES man/${PROJECT_NAME}.1 DESTINATION man/man1 COMPONENT software)
+INSTALL(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin COMPONENT scaledcars-software)
+#INSTALL(TARGETS ${PROJECT_NAME}-static DESTINATION lib COMPONENT scaledcars-software)
+#INSTALL(FILES man/${PROJECT_NAME}.1 DESTINATION man/man1 COMPONENT scaledcars-software)
+
+# Install header files.
+INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION include/sidewaysparker COMPONENT scaledcars-software)
+
 

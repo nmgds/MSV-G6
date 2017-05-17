@@ -20,3 +20,13 @@ message chalmersrevere.scaledcars.ExampleMessage [id = 801] {
     uint32 field1   [id = 1];
 }
 
+message chalmersrevere.scaledcars.CarStatus [id = 806]{	
+	enum carStatus {
+	LANE_FOLLOWING = 0,
+	OVERTAKING = 1,
+	PARKING = 2,
+	};
+	uint32 status [id = 1];
+}
+
+

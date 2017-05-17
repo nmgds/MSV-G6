@@ -14,55 +14,30 @@ services:
       --verbose=1
       --configuration=/opt/configuration/configuration"
 
-  # odsimvehicle
-  # odsimvehicle:
-  #   image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
-  #   depends_on:
-  #     - odsupercomponent
-  #   user: odv
-  #   network_mode: host
-  #   ipc: host
-  #   command: "/opt/od4/bin/odsimvehicle
-  #     --cid=${CID}
-  #     --freq=${FREQ}"
+  # proxy-camera
+  proxy-camera:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    user: odv
+    network_mode: host
+    ipc: host
+    depends_on:
+      - odsupercomponent
+    # environment:
+    #   - DISPLAY=$DISPLAY
+    devices:
+      - "/dev/video1:/dev/video1"
+    command: "/opt/opendlv.core/bin/opendlv-core-system-proxy-camera
+      --cid=111
+      --freq=${FREQ}"
 
-  # odsimirus
-  # odsimirus:
-  #   image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
-  #   depends_on:
-  #     - odsupercomponent
-  #   user: odv
-  #   network_mode: host
-  #   volumes:
-  #     - .:/opt/configuration
-  #   working_dir: /opt/configuration
-  #   ipc: host
-  #   command: "/opt/od4/bin/odsimirus
-  #     --cid=${CID}
-  #     --freq=${FREQ}"
-
-  # odcockpit
-  # odcockpit:
-  #   image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
-  #   depends_on:
-  #     - odsupercomponent
-  #   user: odv
-  #   network_mode: host
-  #   ipc: host
-  #   volumes:
-  #     - .:/opt/configuration
-  #   working_dir: /opt/configuration
-  #   environment:
-  #     - DISPLAY=$DISPLAY
-  #   command: "/opt/od4/bin/odcockpit
-  #     --cid=${CID}"
-  
   # ardu-proxy
   ardu-proxy:
     image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
     user: odv
     network_mode: host
     ipc: host
+    depends_on:
+      - odsupercomponent
     devices:
       - "/dev/ttyACM0:/dev/ttyACM0"
     command: "/opt/opendlv.scaledcars/bin/miniature/ardu-proxy
@@ -76,6 +51,25 @@ services:
      user: odv
      network_mode: host
      ipc: host
+     depends_on:
+      - odsupercomponent
+      - ardu-proxy
      command: "/opt/opendlv.scaledcars/bin/miniature/sidewaysparker
       --cid=111
       --freq=${FREQ}"
+
+  # lanefollower
+  lanefollower:
+     image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+     user: odv
+     network_mode: host
+     ipc: host
+     environment:
+      - DISPLAY=$DISPLAY
+     depends_on:
+      - odsupercomponent
+      - ardu-proxy
+     command: "/opt/opendlv.scaledcars/bin/miniature/lanefollower
+      --cid=111
+      --freq=${FREQ}
+      --verbose=1"
