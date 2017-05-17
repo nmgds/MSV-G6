@@ -36,6 +36,10 @@ services:
     user: odv
     network_mode: host
     ipc: host
+    depends_on:
+      - odsupercomponent
+      - sidewaysparker
+      - lanefollower
     devices:
       - "/dev/ttyACM0:/dev/ttyACM0"
     command: "/opt/opendlv.scaledcars/bin/miniature/ardu-proxy
