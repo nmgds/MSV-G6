@@ -1,360 +1,216 @@
-    /**
-     * overtaker - Sample application for overtaking obstacles.
-     * Copyright (C) 2012 - 2015 Christian Berger
-     *
-     * This program is free software; you can redistribute it and/or
-     * modify it under the terms of the GNU General Public License
-     * as published by the Free Software Foundation; either version 2
-     * of the License, or (at your option) any later version.
-     *
-     * This program is distributed in the hope that it will be useful,
-     * but WITHOUT ANY WARRANTY; without even the implied warranty of
-     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     * GNU General Public License for more details.
-     *
-     * You should have received a copy of the GNU General Public License
-     * along with this program; if not, write to the Free Software
-     * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-     */
-
-    #include <cstdio>
-    #include <cmath>
-    #include <iostream>
-
-    #include "opendavinci/odcore/io/conference/ContainerConference.h"
-    #include "opendavinci/odcore/data/Container.h"
-
-    #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
-    #include "automotivedata/GeneratedHeaders_AutomotiveData.h"
-    #include "odvdscaledcarsdatamodel/generated/chalmersrevere/scaledcars/CarStatus.h"
-
-    #include "Overtaker.h"
-
-    namespace automotive {
-        namespace miniature {
-
-            using namespace std;
-            using namespace odcore::base;
-            using namespace odcore::data;
-            using namespace automotive;
-            using namespace automotive::miniature;
-            bool simulation = false;
-
-            Overtaker::Overtaker(const int32_t &argc, char **argv) :
-                TimeTriggeredConferenceClientModule(argc, argv, "overtaker") {
-            }
-
-            Overtaker::~Overtaker() {}
-
-            void Overtaker::setUp() {
-                // This method will be call automatically _before_ running body().
-                 KeyValueConfiguration kv = getKeyValueConfiguration();
-                simulation = kv.getValue<uint32_t>("global.simulation") == 1;
-                
-
-            }
-
-            void Overtaker::tearDown() {
-                // This method will be call automatically _after_ return from body().
-
-            }
-
-            // This method will do the main data processing job.
-            odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode Overtaker::body() {
-
-                
-              
-             
-                
-                int32_t ULTRASONIC_FRONT_CENTER;
-                int32_t ULTRASONIC_FRONT_RIGHT;
-                int32_t INFRARED_FRONT_RIGHT;
-                int32_t INFRARED_REAR_RIGHT;
-                //int32_t WHEELENCODER;
-
-                double OVERTAKING_DISTANCE;
-
-                //const double HEADING_PARALLEL = 0.04;
-
-                if(simulation == 0) { //todo: fine tune the different angles on the wheel and distances for overtake
-                ULTRASONIC_FRONT_RIGHT = 0;
-                INFRARED_FRONT_RIGHT = 2;
-                INFRARED_REAR_RIGHT = 3;
-                ULTRASONIC_FRONT_CENTER = 1;
-                //WHEELENCODER = 5;
-                OVERTAKING_DISTANCE = 40.0; 
-            }
-                else {
-                ULTRASONIC_FRONT_RIGHT = 0;
-                INFRARED_FRONT_RIGHT = 2;
-                INFRARED_REAR_RIGHT = 3;
-                ULTRASONIC_FRONT_CENTER = 1;
-               // WHEELENCODER = 5;
-                OVERTAKING_DISTANCE = 40.0;
-            }
 
 
-                // Overall state machines for moving and measuring.
-                enum StateMachineMoving { FORWARD, TO_LEFT_LANE_LEFT_TURN, TO_LEFT_LANE_RIGHT_TURN, CONTINUE_ON_LEFT_LANE, TO_RIGHT_LANE_RIGHT_TURN, TO_RIGHT_LANE_LEFT_TURN };
-                enum StateMachineMeasuring { DISABLE, FIND_OBJECT_INIT, FIND_OBJECT, FIND_OBJECT_PLAUSIBLE, HAVE_BOTH_IR, HAVE_BOTH_IR_SAME_DISTANCE, USFR_FIND, USFR_CLEAR,  END_OF_OBJECT };
-                enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
-               
-                StateMachineMoving stageMoving = FORWARD;
-                StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
+#include <cstdio>
+#include <cmath>
+#include <iostream>
 
-                // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
-                double distanceToObstacle = 0;
-                double distanceToObstacleOld = 0;
-               // int32_t wheelEcoderCurrentValue = 0;;
-                //int32_t wheelEncoderNextValue = 0;
+#include "opendavinci/odcore/io/conference/ContainerConference.h"
+#include "opendavinci/odcore/data/Container.h"
 
-                //Declaring data here for printing them out for tracking sensors data.
-                double usfr;
-                double IR_FR;
-                double IR_RR;
-                
+#include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
+#include "automotivedata/GeneratedHeaders_AutomotiveData.h"
+#include "odvdscaledcarsdatamodel/generated/chalmersrevere/scaledcars/CarStatus.h"
 
+#include "Overtaker.h"
 
-                while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
-        
-                    // 1. Get most recent vehicle data:
-                    Container containerVehicleData = getKeyValueDataStore().get(VehicleData::ID());
-                    VehicleData vd = containerVehicleData.getData<VehicleData> ();
+namespace automotive {
+    namespace miniature {
 
-                    // 2. Get most recent sensor board data:
-                    Container containerSensorBoardData = getKeyValueDataStore().get(automotive::miniature::SensorBoardData::ID());
-                    SensorBoardData sbd = containerSensorBoardData.getData<SensorBoardData> ();
+        using namespace std;
+        using namespace odcore::base;
+        using namespace odcore::data;
+        using namespace automotive;
+        using namespace automotive::miniature;
+        bool simulation = false;
 
-                    //Printing out values from sensors
-                     cerr << "Simulation :" << simulation << endl;
-                    distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
-                    cerr << " USFC: " << distanceToObstacle << endl;
-                    usfr = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
-                    cerr << " USFR: " << usfr << endl;
-                    IR_FR= sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
-                    cerr << "IR_FR:  " << IR_FR << endl;
-                    IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
-                    cerr << "IF_RR: " << IR_RR << endl;
+        Overtaker::Overtaker(const int32_t &argc, char **argv) : TimeTriggeredConferenceClientModule(argc, argv, "overtaker") {}
 
+        Overtaker::~Overtaker() {}
 
-                cout << "0: " << sbd.getValueForKey_MapOfDistances(0) << endl;
-                cout << "1: " << sbd.getValueForKey_MapOfDistances(1) << endl;
-                cout << "2: " << sbd.getValueForKey_MapOfDistances(2) << endl;
-                cout << "3: " << sbd.getValueForKey_MapOfDistances(3) << endl;
-                cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
-                cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
-
-
-                    // Create vehicle control data.
-                    VehicleControl vc;
-
-                    // Create vehicle status
-                    chalmersrevere::scaledcars::CarStatus cs;
-
-
-                    // Moving state machine.
-                    if (stageMoving == FORWARD) {
-                      //  vc.setSpeed(4);
-                     cs.setStatus(LANE_FOLLOWING);
-                        // Go forward.
-                  
-                        
-            
-
-                    }
-                    else if (stageMoving == TO_LEFT_LANE_LEFT_TURN) {
-                        cerr << "Changing stage to Left lane Left turn" << endl;
-                        // Move to the left lane: Turn left part until both IRs see something.
-                        cs.setStatus(OVERTAKING);
-                        vc.setSpeed(8);
-                        vc.setSteeringWheelAngle(-0.8);
-
-                        // State machine measuring: Both IRs need to see something before leaving this moving state.
-                      /*  if (stageMeasuring != USFR_CLEAR){
-                            stageMeasuring = USFR_FIND;
-                        }*/
-
-                        
-                        stageMeasuring = HAVE_BOTH_IR;
-                    }
-                    else if (stageMoving == TO_LEFT_LANE_RIGHT_TURN) {
-                        cerr << "Changing stage to Left lane Right turn" << endl;
-                        // Move to the left lane: Turn right part until both IRs have the same distance to obstacle.
-                        cs.setStatus(OVERTAKING);
-                        vc.setSpeed(8);
-                        vc.setSteeringWheelAngle(0.6);
-
-                        // State machine measuring: Both IRs need to have the same distance before leaving this moving state.
-                        //stageMeasuring = HAVE_BOTH_IR_SAME_DISTANCE; 
-                        // State machine measuring: Leave state when front right ultrasonic sensor shows no obstacle
-                        stageMeasuring = HAVE_BOTH_IR_SAME_DISTANCE; 
-                    }
-                    else if (stageMoving == CONTINUE_ON_LEFT_LANE) {
-                        cerr << "Changing stage to continue on left" << endl;
-                        // Move to the left lane: Passing stage.
-                        cs.setStatus(LANE_FOLLOWING);
-                       
-                    
-                        // Find end of object.
-                        stageMeasuring = END_OF_OBJECT;
-                    }
-                    else if (stageMoving == TO_RIGHT_LANE_RIGHT_TURN) {
-                        cerr << "Changing stage to right lane right turn" << endl;
-                        // Move to the right lane: Turn right part.
-                        cs.setStatus(OVERTAKING);
-                        vc.setSpeed(8);
-                        vc.setSteeringWheelAngle(0.6);
-
-
-
-                        if (sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT) < 0 && sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT) < 0) { //need only some right turns to come back to Lane follower
-                            stageMoving = TO_RIGHT_LANE_LEFT_TURN;
-                        }
-                    }
-                    else if (stageMoving == TO_RIGHT_LANE_LEFT_TURN) {
-                        cerr << "Changing stage to right lane Left turn" << endl;
-                        // Move to the left lane: Turn left part.
-                        cs.setStatus(LANE_FOLLOWING);
-                        vc.setSpeed(8);
-                        vc.setSteeringWheelAngle(-0.6);
-
-                    
-                            // Start over.
-                            stageMoving = FORWARD;
-                            stageMeasuring = FIND_OBJECT_INIT;
-
-                            distanceToObstacle = 0;
-                            distanceToObstacleOld = 0;
-
-                        
-                    }
-
-                    // Measuring state machine.
-                    if (stageMeasuring == FIND_OBJECT_INIT) { 
-                                 distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
-                                 cerr << "Object is far: " << distanceToObstacle <<endl;
-                        stageMeasuring = FIND_OBJECT;
-                        distanceToObstacleOld = distanceToObstacle;
-                    }
-                    else if (stageMeasuring == FIND_OBJECT) {
-                        distanceToObstacle = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
-                          cerr << "Obstacle is far away: " << distanceToObstacle <<endl;
-
-                        // Approaching an obstacle (stationary or driving slower than us).
-                        if ( (distanceToObstacle > 0) && (((distanceToObstacleOld - distanceToObstacle) > 0))) {
-                            // Check if overtaking shall be started.
-                            stageMeasuring = FIND_OBJECT_PLAUSIBLE;
-
-                        }
-
-                        distanceToObstacleOld = distanceToObstacle;
-                    }
-                    else if (stageMeasuring == FIND_OBJECT_PLAUSIBLE) { // check if we have to overtake this object.
-                        if (sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER) < OVERTAKING_DISTANCE || 
-                            (sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT) > 0)) {
-                            stageMoving = TO_LEFT_LANE_LEFT_TURN;
-                    
-                            // Disable measuring until requested from moving state machine again.
-                            stageMeasuring = DISABLE;
-                        }
-                        else {
-                            stageMeasuring = FIND_OBJECT;
-                        }
-                    }
-                    else if (stageMeasuring == HAVE_BOTH_IR) {
-                        // Remain in this stage until both IRs see something.
-                      /*  wheelEcoderCurrentValue = sbd.getValueForKey_MapOfDistances(WHEELENCODER);
-                        wheelEncoderNextValue = wheelEcoderCurrentValue + 4;
-
-                        if(wheelEcoderCurrentValue > wheelEncoderNextValue){
-                            stageMoving = TO_LEFT_LANE_RIGHT_TURN;
-                        }*/
-
-                       if ( IR_RR > 0 && IR_FR > 0){
-                       //(sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT) > 0) && 
-                            //(sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT) > 0) ) {
-                            // Turn to right.
-                           stageMoving = TO_LEFT_LANE_RIGHT_TURN;
-                        }
-                    }
-                    else if (stageMeasuring == HAVE_BOTH_IR_SAME_DISTANCE) {
-                        // Remain in this stage until both IRs have the similar distance to obstacle (i.e. turn car)
-                        // and the driven parts of the turn are plausible.
-                        IR_FR = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
-                        IR_RR = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
-                
-                         cerr <<"SENSOR FR--"<< IR_FR <<endl;
-                         cerr <<"SENSOR RR--"<< IR_RR <<endl;
-
-                            if ( (IR_FR - IR_RR) < 10 || (IR_RR - IR_FR) < 10){
-                                  // Straight forward again.
-                            stageMoving = CONTINUE_ON_LEFT_LANE;
-                            }
-
-            
-                          
-                      
-                        
-                    }
-                     else if (stageMeasuring == USFR_FIND) {
-                        // Remain in this stage until front ultrasonic sensor finds obstacle
-                        const double US_FR = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
-                        
-                        if (US_FR > -1 && US_FR < OVERTAKING_DISTANCE) {
-                            // Straight forward again.
-                            stageMeasuring = USFR_CLEAR;
-                        }
-                    }
-                    else if (stageMeasuring == USFR_CLEAR) {
-                        // Remain in this stage until front ultrasonic sensor shows no obstacle
-                        const double US_FR = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
-                        
-                        if (US_FR < 0 || US_FR > 6) {
-                            // Straight forward again.
-                            stageMoving = TO_LEFT_LANE_RIGHT_TURN;
-                        }
-                    }
-                    else if (stageMeasuring == END_OF_OBJECT) {
-                        // Find end of object.
-                       // int32_t distFront = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
-                        //distanceToObstacle = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT); // When rear sensor sees nothing we are clear to move back
-
-                        if (sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT) < 0 && sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT) > 0){
-                            // Move to right lane again.
-                       /* int32_t wheelEcoderCurrentValue = sbd.getValueForKey_MapOfDistances(WHEELENCODER);
-                        int32_t wheelEncoderNextValue = wheelEcoderCurrentValue + 4;
-                        if (wheelEcoderCurrentValue > wheelEncoderNextValue){*/
-                             stageMoving = TO_RIGHT_LANE_RIGHT_TURN;
-                        }
-                          
-                            cerr <<" We ended object" << stageMeasuring << endl;
-                            // Disable measuring until requested from moving state machine again.
-                            stageMeasuring = DISABLE;
-                        
-                    }
-               
-
-                    cout << "State: " << stageMoving << endl;
-                    cout << "StateMeasuring: " << stageMeasuring << endl;
-                    //cout << "IR_FR: " < IR_FR << endl;
-                    // Only send vehicle data if controlling the vehicle from overtaker
-                    if (cs.getStatus() == OVERTAKING){
-                        // Create container for finally sending the data.
-                        Container c(vc);
-                        // Send container.
-                        getConference().send(c);
-                    }
-                     
-
-                    // Try to send cat status
-                    Container cont(cs);
-                    getConference().send(cont);
-                }
-            
-                return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
-            }
-
-
-
+        void Overtaker::setUp() {
+        // This method will be call automatically _before_ running body().
+            KeyValueConfiguration kv = getKeyValueConfiguration();
+            simulation = kv.getValue<uint32_t>("global.simulation") == 1;
         }
-    } // automotive::miniature
+
+        void Overtaker::tearDown() {
+        // This method will be call automatically _after_ return from body().
+        }
+
+    // This method will do the main data processing job.
+        odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode Overtaker::body() {
+
+            int32_t ULTRASONIC_FRONT_CENTER;
+            int32_t ULTRASONIC_FRONT_RIGHT;
+            int32_t INFRARED_FRONT_RIGHT;
+            int32_t INFRARED_REAR_RIGHT;
+            double OVERTAKING_DISTANCE;
+
+        //const double HEADING_PARALLEL = 0.04;
+
+            if(simulation == 0) { //todo: fine tune the different angles on the wheel and distances for overtake
+              ULTRASONIC_FRONT_RIGHT = 0;
+              INFRARED_FRONT_RIGHT = 2;
+              INFRARED_REAR_RIGHT = 3;
+              ULTRASONIC_FRONT_CENTER = 1;
+            //WHEELENCODER = 5;
+              OVERTAKING_DISTANCE = 48.0; 
+            }
+            else {
+              ULTRASONIC_FRONT_RIGHT = 0;
+              INFRARED_FRONT_RIGHT = 2;
+              INFRARED_REAR_RIGHT = 3;
+              ULTRASONIC_FRONT_CENTER = 1;
+              OVERTAKING_DISTANCE = 48.0;
+          }
+
+
+    // Overall state machines for moving and measuring.
+            enum CarStage { FORWARD, LEFT, LEFT_RIGHT, CONTINUE_ON_LEFT_LANE, RIGHT, RIGHT_LEFT };
+            enum ObjectStatus { DISABLE, FIND_OBJECT_INIT, FIND_OBJECT ,FOUND_OBJECT , FIND_OBJECT_SIDE, END_OF_THE_OBJECT};
+            enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
+
+
+            CarStage movingStage = FORWARD;
+            ObjectStatus objectStatus = FIND_OBJECT_INIT; 
+
+    //Declaration of sensors and variables
+          double distanceToObstacle = 0;
+          double distanceToObstacleOld = 0;
+          double usFront = 0;
+          double usRight = 0;
+          double irFront = 0;
+          double irRear  = 0;
+
+          int stateChange = 0;
+
+      while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
+
+            // 1. Get most recent vehicle data:
+        Container containerVehicleData = getKeyValueDataStore().get(VehicleData::ID());
+        VehicleData vd = containerVehicleData.getData<VehicleData> ();
+
+            // 2. Get most recent sensor board data:
+        Container containerSensorBoardData = getKeyValueDataStore().get(automotive::miniature::SensorBoardData::ID());
+        SensorBoardData sbd = containerSensorBoardData.getData<SensorBoardData> ();
+
+        usFront = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_CENTER);
+        usRight = sbd.getValueForKey_MapOfDistances(ULTRASONIC_FRONT_RIGHT);
+        irFront = sbd.getValueForKey_MapOfDistances(INFRARED_FRONT_RIGHT);
+        irRear = sbd.getValueForKey_MapOfDistances(INFRARED_REAR_RIGHT);
+
+        cout << "usFront: " << usFront << endl;
+        cout << "usRight: " << usRight << endl;
+
+        cout << "0: " << sbd.getValueForKey_MapOfDistances(0) << endl;
+        cout << "1: " << sbd.getValueForKey_MapOfDistances(1) << endl;
+        cout << "2: " << sbd.getValueForKey_MapOfDistances(2) << endl;
+        cout << "3: " << sbd.getValueForKey_MapOfDistances(3) << endl;
+        cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
+        cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
+
+ // Create vehicle control data.
+        VehicleControl vc;
+
+// Create vehicle status
+        chalmersrevere::scaledcars::CarStatus cs;
+
+
+// Moving state machine.
+        if (movingStage == FORWARD) {
+   // vc.setSpeed(2);
+            cs.setStatus(LANE_FOLLOWING);
+        }else if (movingStage == LEFT) {
+            cs.setStatus(OVERTAKING);
+            vc.setSpeed(6);
+    //vc.setSpeed(10);
+            vc.setSteeringWheelAngle(-1);
+            cerr <<"LEFT:Angle steering -1" << endl;
+
+            if (usFront < 0 && usRight < 0){
+        //vc.setSteeringWheelAngle(0.8);
+        //cerr <<"LEFT:Angle steering 0.8" << endl;
+                stateChange++;
+            }else{
+                stateChange = 0;
+            }
+            if (stateChange > 3){
+                movingStage = CONTINUE_ON_LEFT_LANE;
+                objectStatus = FIND_OBJECT_SIDE;
+                stateChange = 0;
+            }
+        }else if(movingStage == CONTINUE_ON_LEFT_LANE){
+                cs.setStatus(LANE_FOLLOWING);
+                cerr << "Now lane follow" << endl;
+        }else if(movingStage == RIGHT){
+                cs.setStatus(OVERTAKING);
+                vc.setSteeringWheelAngle(1);
+                vc.setSpeed(6);
+                cerr <<"RIGH:Angle steering 1" << endl;
+
+                if(irFront < 0 && irRear < 0 && usRight < 0) {
+                    //vc.setSteeringWheelAngle(0);
+                    stateChange++;
+                }else{
+                    stateChange = 0;
+                }
+                if (stateChange > 3){
+                    stateChange = 0;
+                    movingStage = FORWARD;
+                    objectStatus = FIND_OBJECT_INIT; 
+                }
+                vc.setSpeed(10);
+                //cs.setStatus(LANE_FOLLOWING);
+        }
+
+        // Measuring state machine.
+        if (objectStatus == FIND_OBJECT_INIT) { 
+            distanceToObstacle = usFront;
+            cerr << "Object is far: " << distanceToObstacle <<endl;
+            objectStatus = FIND_OBJECT;
+            distanceToObstacleOld = distanceToObstacle;
+        }else if (objectStatus == FIND_OBJECT) {
+            distanceToObstacle = usFront;
+            cerr << "Obstacle is far away: " << distanceToObstacle <<endl;
+         // Approaching an obstacle (stationary or driving slower than us).
+            if ( (distanceToObstacle > 0) && (((distanceToObstacleOld - distanceToObstacle) > 0))) {
+                // Check if overtaking shall be started.
+                objectStatus = FOUND_OBJECT;
+            }
+            distanceToObstacleOld = distanceToObstacle;
+        }else if (objectStatus == FOUND_OBJECT) { // check if we have to overtake this object.
+            if (usFront < OVERTAKING_DISTANCE || usRight > 0) {
+                movingStage = LEFT;
+        
+            // Disable measuring until requested from moving state machine again.
+            objectStatus = DISABLE;
+            } else {
+            objectStatus = FIND_OBJECT;
+        }
+        }else if (objectStatus == FIND_OBJECT_SIDE) { // check if we have to overtake this object.
+            if(usRight > -1 && irRear > -1 && irFront > -1){
+                objectStatus = END_OF_THE_OBJECT;
+            }
+        }else if(objectStatus == END_OF_THE_OBJECT){
+            if(usRight < 0 && irFront < 0){
+                movingStage = RIGHT;
+                objectStatus = DISABLE;
+            }
+        }
+        cout << "State: " << movingStage << endl;
+        cout << "StateMeasuring: " << objectStatus << endl;
+        // Only send vehicle data if controlling the vehicle from overtaker
+        if (cs.getStatus() == OVERTAKING){
+     // Create container for finally sending the data.
+            Container c(vc);
+            // Send container.
+            getConference().send(c);
+        }
+        // Try to send cat status
+        Container cont(cs);
+        getConference().send(cont);
+    }
+    return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
+        }
+    }
+} // automotive::miniature
