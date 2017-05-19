@@ -149,10 +149,10 @@ namespace automotive {
             double e = 0;
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
-            const int32_t distance = 220;
+            const int32_t distance = 100;
 
             TimeStamp beforeImageProcessing;
-            for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
+            for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
                 
                 // Search from middle to the right:
                 CvScalar pixelRight;
@@ -275,9 +275,12 @@ namespace automotive {
             //const double Ki = 0.0123123;
 			//const double Kd = 0.00;
 
-		    const double Kp = 1.26;
-            const double Ki = 0.0123123;
-			const double Kd = 0.7;
+		  // Get PID data from configuration file
+            KeyValueConfiguration kva = getKeyValueConfiguration(); 
+            
+            const double Kp = kva.getValue<int32_t> ("lanefollower.Kp");
+            const double Ki = kva.getValue<int32_t> ("lanefollower.Ki");
+            const double Kd = kva.getValue<int32_t> ("lanefollower.Kd");
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;
@@ -303,7 +306,7 @@ namespace automotive {
 
 
             // Go forward.
-            m_vehicleControl.setSpeed(2);
+            m_vehicleControl.setSpeed(5);
             m_vehicleControl.setSteeringWheelAngle(desiredSteering);
         }
 
