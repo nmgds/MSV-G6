@@ -1,0 +1,61 @@
+version: '2'
+
+services:
+  # odsupercomponent
+  odsupercomponent:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    network_mode: host
+    volumes:
+      - .:/opt/configuration
+    working_dir: /opt/configuration
+    command: "/opt/od4/bin/odsupercomponent
+      --cid=${CID}
+      --freq=${FREQ}
+      --verbose=1
+      --configuration=/opt/configuration/configuration"
+
+  # proxy-camera
+  proxy-camera:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    user: odv
+    network_mode: host
+    ipc: host
+    depends_on:
+      - odsupercomponent
+    # environment:
+    #   - DISPLAY=$DISPLAY
+    devices:
+      - "/dev/video1:/dev/video1"
+    command: "/opt/opendlv.core/bin/opendlv-core-system-proxy-camera
+      --cid=111
+      --freq=${FREQ}"
+
+  # ardu-proxy
+  ardu-proxy:
+    image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+    user: odv
+    network_mode: host
+    ipc: host
+    depends_on:
+      - odsupercomponent
+      - lanefollower
+    devices:
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    command: "/opt/opendlv.scaledcars/bin/miniature/ardu-proxy
+      --cid=111
+      --freq=${FREQ}"
+
+  # lanefollower
+  lanefollower:
+     image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+     user: odv
+     network_mode: host
+     ipc: host
+     environment:
+      - DISPLAY=$DISPLAY
+     depends_on:
+      - odsupercomponent
+     command: "/opt/opendlv.scaledcars/bin/lanefollower
+      --cid=111
+      --freq=${FREQ}
+      --verbose=1"
