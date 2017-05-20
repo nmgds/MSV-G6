@@ -384,7 +384,7 @@ proxy-camera.camera.flipped= 1 #1 = flipped image
 #
 #
 sidewaysparker.startstage = 3
-sidewaysparker.speedForward = 6
+sidewaysparker.speedForward = 8
 sidewaysparker.speedBack = -29
 sidewaysparker.gapSize = 6
 sidewaysparker.firstTurn = 3
@@ -393,7 +393,7 @@ sidewaysparker.timer = 10
 sidewaysparker.transition = 0
 sidewaysparker.readydistance = 4
 sidewaysparker.readydistance = 2
-lanefollower.speedForward = 6
+lanefollower.speedForward = 8
 
 ardu-proxy.serialPort = /dev/ttyACM0
 ardu-proxy.serialSpeed = 9600

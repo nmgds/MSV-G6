@@ -92,7 +92,7 @@ namespace automotive {
 			enum MeasuringState {START_MEASURING, GAP_BEGIN, GAP_END};
 			enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
 			
-            ParkingState stageMoving = START;
+            ParkingState stageMoving = GO_FORWARD;
 			MeasuringState stageMeasuring = START_MEASURING;
 			
 			
