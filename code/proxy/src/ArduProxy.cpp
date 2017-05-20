@@ -212,7 +212,6 @@ namespace automotive {
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);
 			
 			//serial->send(makeMovingCommand(desired_speed));
-			odcore::base::Thread::usleepFor(1*ONE_SECOND);			
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
 			
@@ -267,6 +266,9 @@ namespace automotive {
             }
             catch(string &exception) {
                 cerr << "Serial port could not be created: " << exception << endl;
+				odcore::base::Thread::usleepFor(1000 * 1000);
+					
+				body();
             }
             return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
         }
