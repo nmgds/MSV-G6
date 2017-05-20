@@ -41,5 +41,3 @@ services:
      command: "/opt/opendlv.scaledcars/bin/sidewaysparker
       --cid=111
       --freq=${FREQ}"
-
-
