@@ -61,15 +61,14 @@ namespace automotive {
            //const double IR_RIGHT_BACK = 3;
 			//const double IR_BACK = 4;
             const double WHEEL_ENCODER = 5;
-			/*
+			
             double distanceOld = 0;
             double absPathStart = 0;
             double absPathEnd = 0;
-			*/
+			
 			
 
 			KeyValueConfiguration kv = getKeyValueConfiguration();
-			//const int speedForward = kv.getValue<int32_t>("proxy-camera.camera.width");
 			const int speedForward = kv.getValue<int32_t>("sidewaysparker.speedForward");
 			const int speedBackward = kv.getValue<int32_t>("sidewaysparker.speedBack");
 			const int COUNTER_MAX = kv.getValue<int32_t>("sidewaysparker.timer");
@@ -78,25 +77,27 @@ namespace automotive {
 			const int SECOND_TURN = kv.getValue<int32_t>("sidewaysparker.secondTurn");
 			const int TRANSITION_VALUE = kv.getValue<int32_t>("sidewaysparker.transition");
 			//const int STARTING_STAGE = kv.getValue<int32_t>("sidewaysparker.startstage");
+			const int READY_TO_PARK_DISTANCE = kv.getValue<int32_t>("sidewaysparker.readydistance");
+			
 			
 			int counter = 0;
 			int startParking = 0;
 			
 			
 			
-			int lastEncoderValue = 0;
-			int freeSpaceCounter = 0;
+			//int lastEncoderValue = 0;
+			//int freeSpaceCounter = 0;
 			
 			enum ParkingState {START, GO_FORWARD, READY_TO_PARK, TURN_RIGHT, WAITING_ONE, TRANSITION, WAITING_TWO, TURN_LEFT, STOP};
 			enum MeasuringState {START_MEASURING, GAP_BEGIN, GAP_END};
 			enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
 			
-            ParkingState stageMoving = GO_FORWARD;
-			//MeasuringState stageMeasuring = START_MEASURING;
+            ParkingState stageMoving = START;
+			MeasuringState stageMeasuring = START_MEASURING;
 			
 			
-			uint8_t encoderVal = 0;
-			
+			int encoderVal = 0;
+			int readyToPark = 0;
 			
 			
 
@@ -118,7 +119,7 @@ namespace automotive {
                 cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
                 cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
 				cout << "State: " << stageMoving << endl;
-
+				cout << "SpeedFwd: " << speedForward << endl;
                 // Create vehicle control data.
                 VehicleControl vc;
 
@@ -127,39 +128,47 @@ namespace automotive {
 
 
           
-				int readyToPark = 0;
+				
 				encoderVal = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
                 //int start = 0;
 
                 // Moving state machine.
                 
-				// if(stageMoving == START){
-				// 	//vc.setSteeringWheelAngle(0);
-				// 	//vc.setSpeed(speedForward);
-				// 	cs.setStatus(LANE_FOLLOWING);
-				// 	// if(encoderVal > 2){
-				// 	// 	stageMoving = GO_FORWARD;
-				// 	// }
-				// }
-				if(stageMoving == GO_FORWARD){
-					// vc.setSteeringWheelAngle(0);
-					// vc.setSpeed(speedForward);
-
-				}
-				if(stageMoving == READY_TO_PARK){
-					if(encoderVal - readyToPark > 8){
-						vc.setSpeed(speedBackward + 2);
-						vc.setSteeringWheelAngle(30);
-						counter++;
-						if(counter > COUNTER_MAX){
-							stageMoving = TURN_RIGHT;
-							counter = 0;
-							startParking = encoderVal;
-						}
-						
+				 if(stageMoving == START){
+					vc.setSteeringWheelAngle(0);
+					vc.setSpeed(speedForward+1);
+					cs.setStatus(LANE_FOLLOWING);
+					if(encoderVal > 2){
+					stageMoving = GO_FORWARD;
 					}
 				}
+				
+				if(stageMoving == GO_FORWARD){
+
+					 vc.setSteeringWheelAngle(0);
+					 vc.setSpeed(speedForward);
+				}
+				
+				if(stageMoving == READY_TO_PARK){
+					cout<<"Encoder val: "<<encoderVal<<endl;
+					cout<<"Ready to park: "<<readyToPark<<endl;
+					vc.setSpeed(speedForward);
+					if(sbd.getValueForKey_MapOfDistances(3) > 0){
+						if(encoderVal - readyToPark > READY_TO_PARK_DISTANCE){
+							cs.setStatus(PARKING);
+							vc.setSpeed(speedBackward + 2);
+							vc.setSteeringWheelAngle(30);
+							counter++;
+							if(counter > COUNTER_MAX){
+								stageMoving = TURN_RIGHT;
+								counter = 0;
+								startParking = encoderVal;
+							}
+						}
+					}
+				}
+				
 				if(stageMoving == TURN_RIGHT){
 					vc.setSteeringWheelAngle(30);
 					vc.setSpeed(speedBackward);
@@ -173,9 +182,10 @@ namespace automotive {
 				}
 				if(stageMoving == WAITING_ONE){
 					counter++;
-					vc.setSpeed((speedForward / 2) + 1);
+					vc.setSpeed(speedForward); //Fix this
 					startParking = encoderVal;
 					if(counter > COUNTER_MAX){
+						vc.setSpeed(0);
 						counter = 0;
 						stageMoving = TURN_LEFT;
 					}
@@ -191,9 +201,10 @@ namespace automotive {
 				}
 				if(stageMoving == WAITING_TWO){
 					counter++;
-					vc.setSpeed((speedForward / 2) + 1);
+					vc.setSpeed(speedForward);
 					startParking = encoderVal;
 					if(counter > COUNTER_MAX){
+						vc.setSpeed(0);
 						counter = 0;
 						stageMoving = TURN_LEFT;
 					}
@@ -201,7 +212,7 @@ namespace automotive {
 				if(stageMoving == TURN_LEFT){
 					vc.setSteeringWheelAngle(-30);
 					vc.setSpeed(speedBackward);
-					counter++;
+					//counter++;
 					if(encoderVal - startParking > SECOND_TURN){
 					  //if(counter > 40){
 						stageMoving = STOP;
@@ -222,6 +233,9 @@ namespace automotive {
 					vc.setSpeed(0);
 				}
 				
+
+
+				/*
 				if(sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0 && stageMoving == GO_FORWARD){
 					freeSpaceCounter =  freeSpaceCounter + (encoderVal - lastEncoderValue); 
 				}else{
@@ -237,11 +251,11 @@ namespace automotive {
 				
 				
 				lastEncoderValue = encoderVal;
+				*/
 				
 				
 				
 				
-				/*
                 // Measuring state machine.
                 switch (stageMeasuring) {
                     case START_MEASURING:
@@ -268,30 +282,34 @@ namespace automotive {
                                 stageMeasuring = GAP_BEGIN;
                                 absPathEnd = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
-                                const double GAP_SIZE = (absPathEnd - absPathStart);
+                                const double GAP = (absPathEnd - absPathStart);
 
-                                cerr << "Size = " << GAP_SIZE << endl;
+                                cerr << "Size = " << GAP << endl;
 
-                                if (stageMoving == GO_FORWARD && (GAP_SIZE > 4)) {
+                                if (stageMoving == GO_FORWARD && (GAP >= GAP_SIZE)) {
+									readyToPark = encoderVal;
                                     stageMoving = READY_TO_PARK;
-									startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
                                }
                             }
                             distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
                         }
                     break;
                 }
-				*/
 				
 				
-                // Create container for finally sending the data.
-                Container c(vc);
-                // Send container.
-                getConference().send(c);
+				if(stageMoving!=GO_FORWARD){
+					// Create container for finally sending the data.
+					Container c(vc);
+					// Send container.
+					getConference().send(c);
+				}
 
                 // Try to send car status
 				if(stageMoving == GO_FORWARD){
 					cs.setStatus(LANE_FOLLOWING);
+				}
+				else if(stageMoving == READY_TO_PARK){
+					//do nothing
 				}
 				else{
 					cs.setStatus(PARKING);
