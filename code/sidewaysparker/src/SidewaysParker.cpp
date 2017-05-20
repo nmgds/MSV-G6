@@ -136,7 +136,7 @@ namespace automotive {
                 // Moving state machine.
                 
 				 if(stageMoving == START){
-					vc.setSteeringWheelAngle(0);
+					vc.setSteeringWheelAngle(0.2);
 					vc.setSpeed(speedForward+1);
 					cs.setStatus(LANE_FOLLOWING);
 					if(encoderVal > 2){
@@ -146,11 +146,12 @@ namespace automotive {
 				
 				if(stageMoving == GO_FORWARD){
 
-					 vc.setSteeringWheelAngle(0);
+					 vc.setSteeringWheelAngle(0.5);
 					 vc.setSpeed(speedForward);
 				}
 				
 				if(stageMoving == READY_TO_PARK){
+					vc.setSpeed(speedForward);
 					cout<<"Encoder val: "<<encoderVal<<endl;
 					cout<<"Ready to park: "<<readyToPark<<endl;
 					vc.setSpeed(speedForward);
