@@ -306,7 +306,7 @@ namespace automotive {
 
 
             // Go forward.
-            m_vehicleControl.setSpeed(5);
+            m_vehicleControl.setSpeed(6);
             m_vehicleControl.setSteeringWheelAngle(desiredSteering);
         }
 
@@ -326,36 +326,10 @@ namespace automotive {
 
             cvInitFont(&m_font, CV_FONT_HERSHEY_DUPLEX, hscale, vscale, shear, thickness, lineType);
 
-            // Parameters for overtaking.
-            //const int32_t ULTRASONIC_FRONT_CENTER = 3;
-            //const int32_t ULTRASONIC_FRONT_RIGHT = 4;
-            //const int32_t INFRARED_FRONT_RIGHT = 0;
-            //const int32_t INFRARED_REAR_RIGHT = 2;
-
-            //const double OVERTAKING_DISTANCE = 5.5;
-            //const double HEADING_PARALLEL = 0.04;
-
             // Overall state machines for moving and measuring.
-            enum StateMachineMoving { FORWARD, TO_LEFT_LANE_LEFT_TURN, TO_LEFT_LANE_RIGHT_TURN, CONTINUE_ON_LEFT_LANE, TO_RIGHT_LANE_RIGHT_TURN, TO_RIGHT_LANE_LEFT_TURN };
-            enum StateMachineMeasuring { DISABLE, FIND_OBJECT_INIT, FIND_OBJECT, FIND_OBJECT_PLAUSIBLE, HAVE_BOTH_IR, HAVE_BOTH_IR_SAME_DISTANCE, END_OF_OBJECT };
-            enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
-
-            //StateMachineMoving stageMoving = FORWARD;
-            //StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
-
-            // State counter for dynamically moving back to right lane.
-            //int32_t stageToRightLaneRightTurn = 0;
-            //int32_t stageToRightLaneLeftTurn = 0;
-
-            // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
-            //double distanceToObstacle = 0;
-            //double distanceToObstacleOld = 0;
+           enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
  
             chalmersrevere::scaledcars::CarStatus cs;
-            //cs.setStatus(4);
-            // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
-            //double distanceToObstacle = 0;
-            //double distanceToObstacleOld = 0;
 
             bool isActive = true;
 

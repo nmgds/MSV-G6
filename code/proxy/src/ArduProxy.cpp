@@ -97,14 +97,14 @@ namespace automotive {
 			uint8_t number = s.at(1);
 			switch(mask){
 				case 0x01:
-					if(number <= 0 || number >= 55){
+					if(number <= 0 || number >= 45){
 						sensorValues[0] = -1;
 					}else{
 						sensorValues[0] = number;
 					}
 					break;
 				case 0x02:
-					if(number <= 0 || number >= 55){
+					if(number <= 0 || number >= 45){
 						sensorValues[1] = -1;
 					}else{
 						sensorValues[1] = number;
@@ -274,3 +274,4 @@ namespace automotive {
 
     }
 } // automotive::miniature
+
