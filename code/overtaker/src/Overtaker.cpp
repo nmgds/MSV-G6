@@ -83,7 +83,8 @@
               double usRight = 0;
               double irFront = 0;
               double irRear  = 0;
-              double wheelEncoder = 0; //Hello
+              double wheelEncoder = 0;
+
 
 
               double turnStart = 0;
@@ -123,8 +124,9 @@
 
         // Moving state machine.
                 if (movingStage == FORWARD) {
-                	cs.setStatus(OVERTAKING);
-                   	vc.setSteeringWheelAngle(0);
+
+                    cs.setStatus(OVERTAKING);
+                    vc.setSteeringWheelAngle(0);
 
                 }else if (movingStage == LEFT) {
                     cs.setStatus(OVERTAKING);
@@ -138,7 +140,7 @@
                     }
 
                 }else if(movingStage == LEFT_RIGHT){
-                	cs.setStatus(OVERTAKING);  
+                    cs.setStatus(OVERTAKING);  
                     vc.setSpeed(3);
                     vc.setSteeringWheelAngle(0.5);
 
@@ -147,14 +149,14 @@
                     }
                         
                 }else if(movingStage == CONTINUE_ON_LEFT_LANE){
-                	cs.setStatus(OVERTAKING);
+                    cs.setStatus(OVERTAKING);
                     vc.setSteeringWheelAngle(0);
                     vc.setSpeed(3);
-   					turnStart = wheelEncoder + 5;
+                    turnStart = wheelEncoder + 5;
 
                     if(irRear > 0 && irFront < 0) {
-                    	movingStage = RIGHT;
-                	}
+                        movingStage = RIGHT;
+                    }
            
                 }else if(movingStage == RIGHT){
                     cs.setStatus(OVERTAKING);
@@ -163,19 +165,20 @@
                     cerr <<"RIGHT:Angle steering to right" << endl;
 
                     if(wheelEncoder > turnStart){
-                    	turnStart = wheelEncoder + 2;
+                        turnStart = wheelEncoder + 2;
                         movingStage = RIGHT_LEFT;
                         }       
        
                 }else if(movingStage == RIGHT_LEFT){
-                	cs.setStatus(OVERTAKING);
+                    cs.setStatus(OVERTAKING);
                     vc.setSpeed(3);
                     vc.setSteeringWheelAngle(-1);
 
                     if(wheelEncoder > turnStart){
-                    	cerr << "Again at the beginning" << endl;
-                    	objectStatus = FIND_OBJECT_INIT;
-                    	movingStage = FORWARD;
+   
+                        cerr << "Again at the beginning" << endl;
+                        objectStatus = FIND_OBJECT_INIT;
+                        movingStage = FORWARD;
                     }
 
                 }
@@ -230,4 +233,6 @@
         return odcore::data::dmcp::ModuleExitCodeMessage::OKAY;
             }
         }
+
     } // automotive::miniature
+
