@@ -311,31 +311,6 @@ namespace automotive {
             else {
                 m_eSum += e;
             }
-
-            
-            
-            //const double Kp = 2.5;
-            //const double Ki = 8.5;
-//           const double Kd = 0;
-
-            // The following values have been determined by Twiddle algorithm.
-			/*
-            const double Kp = 0.4482626884328734;
-            const double Ki = 3.103197570937628;
-            const double Kd = 0.030450210485408566;
-            */
-          //  const double Kp = 1.193434;
-          //  const double Ki = 0.090000;
-          //  const double Kd = 0.160000;
-          
-           // const double Kp = 0.440;
-           // const double Ki = 3.11;
-           // const double Kd = 0.003;
-		   
-		    //const double Kp = 1.009;
-            //const double Ki = 0.0123123;
-			//const double Kd = 0.00;
-
 	
 			// Get PID data from configuration file
 		    KeyValueConfiguration kva = getKeyValueConfiguration(); 
