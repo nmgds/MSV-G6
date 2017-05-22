@@ -150,7 +150,7 @@ namespace automotive {
             double e = 0;
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
-            const int32_t distance = 100;
+            const int32_t distance = 200;
             
             // Horizontal line detection on the track
           
@@ -311,6 +311,7 @@ namespace automotive {
             else {
                 m_eSum += e;
             }
+
             
             
             //const double Kp = 2.5;
