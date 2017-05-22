@@ -57,23 +57,9 @@ void setup() {
   encoder.attach(ODOMETER_PIN);
   encoder.begin();
   Serial.begin(9600);
-  attachInterrupt(5, turnOnRC, HIGH); //PIN 18
   //attachInterrupt(4, remoteControl, RISING); //PIN 19
 }
 
-void turnOnRC(){
-  detachInterrupt(5);
-  useRC = true;
-  attachInterrupt(5,turnOffRC,LOW);
-}
-
-void turnOffRC(){
-  detachInterrupt(5);
-  currentSteering = 60;
-  currentSpeed = 1500;
-  useRC = false;
-  attachInterrupt(5,turnOnRC,HIGH);
-}
 
 void loop() {
   while(useRC){

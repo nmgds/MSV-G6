@@ -179,7 +179,6 @@ namespace automotive {
 
 			int steeringValue = 0;
 			int speedValue = 0;
-			int lastSpeed = 0;
 			int lastSteering = 0;
 			
             try {			
@@ -220,10 +219,9 @@ namespace automotive {
 					cout<<"Steering:" << steeringValue<<endl;
 					cout<<"Speed:"<<speedValue<<endl;
 
-					if(speedValue != lastSpeed){
-						serial->send(makeMovingCommand(speedValue));	
-						lastSpeed = speedValue;
-					}
+					
+					serial->send(makeMovingCommand(speedValue));	
+					
 					if(steeringValue != lastSteering){
 						//adjust steering
 						if(steeringValue > 30){

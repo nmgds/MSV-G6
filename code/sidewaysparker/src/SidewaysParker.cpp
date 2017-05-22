@@ -58,8 +58,8 @@ namespace automotive {
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode SidewaysParker::body() {
 
             const double IR_RIGHT_FRONT = 2;
-           //const double IR_RIGHT_BACK = 3;
-			//const double IR_BACK = 4;
+           	const double IR_RIGHT_BACK = 3;
+			const double IR_BACK = 4;
             const double WHEEL_ENCODER = 5;
 			
             double distanceOld = 0;
@@ -75,16 +75,19 @@ namespace automotive {
 			const int GAP_SIZE = kv.getValue<int32_t>("sidewaysparker.gapSize");
 			const int FIRST_TURN = kv.getValue<int32_t>("sidewaysparker.firstTurn");
 			const int SECOND_TURN = kv.getValue<int32_t>("sidewaysparker.secondTurn");
+			const int DISTANCE_OBSTACLE = kv.getValue<int32_t>("sidewaysparker.distanceObstacle");
 			const int TRANSITION_VALUE = kv.getValue<int32_t>("sidewaysparker.transition");
 			//const int STARTING_STAGE = kv.getValue<int32_t>("sidewaysparker.startstage");
 			const int READY_TO_PARK_DISTANCE = kv.getValue<int32_t>("sidewaysparker.readydistance");
+
 			
 			
 			int counter = 0;
 			int startParking = 0;
 			
-			
-			
+			int sensorBackNow = 0;
+			int sensorBackPrev1 = -1;
+			int sensorBackPrev2 = -1;
 			//int lastEncoderValue = 0;
 			//int freeSpaceCounter = 0;
 			
@@ -130,7 +133,7 @@ namespace automotive {
           
 				
 				encoderVal = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
-
+				sensorBackNow = sbd.getValueForKey_MapOfDistances(IR_BACK);
                 //int start = 0;
 
                 // Moving state machine.
@@ -155,7 +158,7 @@ namespace automotive {
 					cout<<"Encoder val: "<<encoderVal<<endl;
 					cout<<"Ready to park: "<<readyToPark<<endl;
 					vc.setSpeed(speedForward);
-					if(sbd.getValueForKey_MapOfDistances(3) > 0){
+					if(sbd.getValueForKey_MapOfDistances(IR_RIGHT_BACK) > 0){
 						if(encoderVal - readyToPark > READY_TO_PARK_DISTANCE){
 							cs.setStatus(PARKING);
 							vc.setSpeed(speedBackward + 2);
@@ -214,24 +217,40 @@ namespace automotive {
 					vc.setSteeringWheelAngle(-30);
 					vc.setSpeed(speedBackward);
 					//counter++;
+					/* without back sensor!
 					if(encoderVal - startParking > SECOND_TURN){
 					  //if(counter > 40){
 						stageMoving = STOP;
 					}
+					*/
+
 					
 					
-			//		if((sbd.getValueForKey_MapOfDistances(IR_BACK) > 0 && sbd.getValueForKey_MapOfDistances(IR_BACK) < 15) ){
-//						vc.setSteeringWheelAngle(0);
-//						vc.setSpeed(5);
-//						startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
-				//		stageMoving = STOP;
-					//}
+					if((sensorBackPrev1 > 0 && sensorBackPrev1 <= DISTANCE_OBSTACLE)){
+					//	if(sensorBackPrev1 == sensorBackPrev2 || sensorBackPrev1 == sensorBackNow){
+							if(encoderVal - startParking > SECOND_TURN){
+								vc.setSteeringWheelAngle(0);
+								vc.setSpeed(1);
+								startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+								stageMoving = STOP;
+								counter = 0;
+							}
+					//	}
+					}
+
+					if(sensorBackPrev1 == sensorBackPrev2 || sensorBackPrev1 == sensorBackNow){}
 					
+					sensorBackPrev2 = sensorBackPrev1;
+					sensorBackPrev1 = sbd.getValueForKey_MapOfDistances(IR_BACK);
 					
 				}
 				if(stageMoving == STOP){
-					vc.setSteeringWheelAngle(0);
-					vc.setSpeed(0);
+					counter++;
+					vc.setSpeed(speedForward);
+					if(counter > COUNTER_MAX){
+						vc.setSteeringWheelAngle(0);
+						vc.setSpeed(0);
+					}
 				}
 				
 
