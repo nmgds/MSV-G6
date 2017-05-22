@@ -34,6 +34,7 @@
 #include "opendavinci/GeneratedHeaders_OpenDaVINCI.h"
 
 #include "odvdscaledcarsdatamodel/generated/chalmersrevere/scaledcars/CarStatus.h"
+#include "opendavinci/odcore/base/KeyValueConfiguration.h"
 
 #include "LaneFollower.h"
 
@@ -62,6 +63,8 @@ namespace automotive {
             m_eSum(0),
             m_eOld(0),
             m_vehicleControl() {}
+            
+            
 
         LaneFollower::~LaneFollower() {}
 
@@ -110,7 +113,6 @@ namespace automotive {
 				        gray = cvCreateImage(cvSize(m_image->width, m_image->height), IPL_DEPTH_8U, 1);
 				        blur = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
 				        thresh = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
-
 			        }
 
 			        // Copying the image data is very expensive...
@@ -130,7 +132,6 @@ namespace automotive {
 						       //cvThreshold(gray, thresh, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
 						       cvSmooth(gray, blur, CV_GAUSSIAN, 9, 9, 10);
 						       cvAdaptiveThreshold(blur, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
-
 						   }
 			        }
 
@@ -149,11 +150,43 @@ namespace automotive {
             double e = 0;
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
-            const int32_t distance = 100;
-
+            const int32_t distance = 200;
+            
+            // Horizontal line detection on the track
+          
+				// line 1 (vertical) - Search from bottom to CONTROL_SCANLINE-100:
+				CvScalar pixelVertical;
+				CvPoint vertical;
+				vertical.y = -1;
+				vertical.x = thresh->width/2 - 100;
+				
+				for (int i = CONTROL_SCANLINE; i > CONTROL_SCANLINE - 100; i--) {
+					pixelVertical = cvGet2D(thresh, i, vertical.x);
+					if (pixelVertical.val[0] >= 200) {
+							vertical.y = i;
+							break;
+						}
+					}
+			
+					
+				// line 2 (diagonal) - Search from bottom to CONTROL_SCANLINE-100:
+				CvScalar pixelDiagonal;
+				CvPoint diagonal;
+				diagonal.y = -1;
+				diagonal.x = thresh->width/2 - 100;
+					
+				for (int i=CONTROL_SCANLINE; i > CONTROL_SCANLINE - 100; i--) {
+					pixelDiagonal = cvGet2D(thresh, i, diagonal.x);
+					if (pixelDiagonal.val[0] >= 200) {
+							diagonal.y = i;
+							break;
+						}
+					}
+					
             TimeStamp beforeImageProcessing;
-            for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
-                
+            //for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
+              for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
+
                 // Search from middle to the right:
                 CvScalar pixelRight;
                 CvPoint right;
@@ -178,11 +211,10 @@ namespace automotive {
                         left.x = x;
                         break;
                     }
-                }
-
-
+                }      
+                
                 if (m_debug) {
-                    if (left.x > 0) {
+                   if (left.x > 0) {
                     	CvScalar green = CV_RGB(0, 255, 0);
                     	cvLine(m_image, cvPoint(m_image->width/2, y), left, green, 1, 8);
 
@@ -190,6 +222,8 @@ namespace automotive {
                         sstr << (m_image->width/2 - left.x);
                     	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 - 100, y - 2), &m_font, green);
                     }
+                 
+                    
                     if (right.x > 0) {
                     	CvScalar red = CV_RGB(255, 0, 0);
                     	cvLine(m_image, cvPoint(m_image->width/2, y), right, red, 1, 8);
@@ -198,9 +232,33 @@ namespace automotive {
                         sstr << (right.x - m_image->width/2);
                     	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 + 100, y - 2), &m_font, red);
                     }
-                }
+                    
+                   // Draws the vertical lines detected in the lane in the m_image
+                   
+                   // line 1 (vertical)
+                    if (vertical.y > 0 && (y == CONTROL_SCANLINE)){
+                        CvScalar blue = CV_RGB(0,0, 255);
+                        cvLine(m_image, cvPoint(m_image->width / 2 - 100, y), vertical, blue, 3, 8);
 
+                        stringstream sstr;
+                        sstr << ((m_image->height - 8) - vertical.y);
+                        cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 - 50, y - 100), &m_font, blue);
+
+                       }
+                       
+					//line 2 (diagonal)
+                    if (diagonal.y > 0 && (y == CONTROL_SCANLINE)){
+                         CvScalar purple = CV_RGB(122,0, 122);
+                         cvLine(m_image, cvPoint(m_image->width / 2 + 100, y), diagonal, purple, 3, 8);         
+
+                         stringstream sstr;
+                         sstr << ((m_image->height - 8) - diagonal.y);
+                         cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2, y - 100), &m_font, purple);
+                       }
+                   }
+                   
                 if (y == CONTROL_SCANLINE) {
+					
                     // Calculate the deviation error.
                     
                     if (right.x > 0) {
@@ -253,6 +311,9 @@ namespace automotive {
             else {
                 m_eSum += e;
             }
+
+            
+            
             //const double Kp = 2.5;
             //const double Ki = 8.5;
 //           const double Kd = 0;
@@ -275,12 +336,14 @@ namespace automotive {
             //const double Ki = 0.0123123;
 			//const double Kd = 0.00;
 
-		  // Get PID data from configuration file
-            KeyValueConfiguration kva = getKeyValueConfiguration(); 
-            
-            const double Kp = kva.getValue<int32_t> ("lanefollower.Kp");
+	
+			// Get PID data from configuration file
+		    KeyValueConfiguration kva = getKeyValueConfiguration(); 
+	        
+		    const double Kp = kva.getValue<int32_t> ("lanefollower.Kp");
             const double Ki = kva.getValue<int32_t> ("lanefollower.Ki");
-            const double Kd = kva.getValue<int32_t> ("lanefollower.Kd");
+			const double Kd = kva.getValue<int32_t> ("lanefollower.Kd");
+	        const int speedForward = kva.getValue<int32_t> ("lanefollower.speedForward");
 
             const double p = Kp * e;
             const double i = Ki * timeStep * m_eSum;
@@ -306,7 +369,7 @@ namespace automotive {
 
 
             // Go forward.
-            m_vehicleControl.setSpeed(6);
+            m_vehicleControl.setSpeed(speedForward);
             m_vehicleControl.setSteeringWheelAngle(desiredSteering);
         }
 
@@ -326,15 +389,15 @@ namespace automotive {
 
             cvInitFont(&m_font, CV_FONT_HERSHEY_DUPLEX, hscale, vscale, shear, thickness, lineType);
 
-            // Overall state machines for moving and measuring.
-           enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
  
-            chalmersrevere::scaledcars::CarStatus cs;
+            // Overall state machines for moving and measuring.
+            enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
 
+            chalmersrevere::scaledcars::CarStatus cs;
             bool isActive = true;
 
             // Overall state machine handler.
-            while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
+	        while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
                 bool has_next_frame = false;
 
                 Container cont = getKeyValueDataStore().get(chalmersrevere::scaledcars::CarStatus::ID());
@@ -344,10 +407,10 @@ namespace automotive {
                     //cerr << "Reading new value " << readValue << endl;
                     if (carStatus == LANE_FOLLOWING){
                         isActive = true;
-                        cerr << "Active " << endl;
+                        cout << "Active " << endl;
                     }else{
                         isActive = false;
-                        cerr << "Inactive " << endl;
+                        cout << "Inactive " << endl;
                     }
                 }
 
@@ -379,8 +442,5 @@ namespace automotive {
 
     }
 } // automotive::miniature
-
-
-
 
 
