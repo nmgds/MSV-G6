@@ -24,6 +24,7 @@
 
 // Include local header files.
 #include "../include/Overtaker.h"
+#include "opendavinci/odcore/base/module/TimeTriggeredConferenceClientModule.h"
 
 using namespace std;
 using namespace odcore::data;
