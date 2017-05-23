@@ -130,6 +130,7 @@ namespace automotive {
 						       // Gaussian threshold on gray
 						       //cvAdaptiveThreshold(gray, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
 						       //cvThreshold(gray, thresh, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+						      
 						       cvSmooth(gray, blur, CV_GAUSSIAN, 9, 9, 10);
 						       cvAdaptiveThreshold(blur, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
 						   }
@@ -151,40 +152,9 @@ namespace automotive {
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
             const int32_t distance = 200;
-            
-            // Horizontal line detection on the track
-          
-				// line 1 (vertical) - Search from bottom to CONTROL_SCANLINE-100:
-				CvScalar pixelVertical;
-				CvPoint vertical;
-				vertical.y = -1;
-				vertical.x = thresh->width/2 - 100;
-				
-				for (int i = CONTROL_SCANLINE; i > CONTROL_SCANLINE - 100; i--) {
-					pixelVertical = cvGet2D(thresh, i, vertical.x);
-					if (pixelVertical.val[0] >= 200) {
-							vertical.y = i;
-							break;
-						}
-					}
-			
-					
-				// line 2 (diagonal) - Search from bottom to CONTROL_SCANLINE-100:
-				CvScalar pixelDiagonal;
-				CvPoint diagonal;
-				diagonal.y = -1;
-				diagonal.x = thresh->width/2 - 100;
-					
-				for (int i=CONTROL_SCANLINE; i > CONTROL_SCANLINE - 100; i--) {
-					pixelDiagonal = cvGet2D(thresh, i, diagonal.x);
-					if (pixelDiagonal.val[0] >= 200) {
-							diagonal.y = i;
-							break;
-						}
-					}
 					
             TimeStamp beforeImageProcessing;
-            //for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
+            // Scan lines set a bit higher than default .60
               for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
 
                 // Search from middle to the right:
@@ -232,29 +202,6 @@ namespace automotive {
                         sstr << (right.x - m_image->width/2);
                     	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 + 100, y - 2), &m_font, red);
                     }
-                    
-                   // Draws the vertical lines detected in the lane in the m_image
-                   
-                   // line 1 (vertical)
-                    if (vertical.y > 0 && (y == CONTROL_SCANLINE)){
-                        CvScalar blue = CV_RGB(0,0, 255);
-                        cvLine(m_image, cvPoint(m_image->width / 2 - 100, y), vertical, blue, 3, 8);
-
-                        stringstream sstr;
-                        sstr << ((m_image->height - 8) - vertical.y);
-                        cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 - 50, y - 100), &m_font, blue);
-
-                       }
-                       
-					//line 2 (diagonal)
-                    if (diagonal.y > 0 && (y == CONTROL_SCANLINE)){
-                         CvScalar purple = CV_RGB(122,0, 122);
-                         cvLine(m_image, cvPoint(m_image->width / 2 + 100, y), diagonal, purple, 3, 8);         
-
-                         stringstream sstr;
-                         sstr << ((m_image->height - 8) - diagonal.y);
-                         cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2, y - 100), &m_font, purple);
-                       }
                    }
                    
                 if (y == CONTROL_SCANLINE) {
