@@ -22,8 +22,6 @@ services:
     ipc: host
     depends_on:
       - odsupercomponent
-    # environment:
-    #   - DISPLAY=$DISPLAY
     devices:
       - "/dev/video1:/dev/video1"
     command: "/opt/opendlv.core/bin/opendlv-core-system-proxy-camera
