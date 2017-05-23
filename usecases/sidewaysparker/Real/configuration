@@ -385,7 +385,7 @@ proxy-camera.camera.flipped= 1 #1 = flipped image
 #
 sidewaysparker.speedForward = 5
 sidewaysparker.speedBack = -28
-sidewaysparker.gapSize = 6
+sidewaysparker.gapSize = 5
 sidewaysparker.firstTurn = 4
 sidewaysparker.secondTurn = 2
 # TIMER1: LONG PAUSES
