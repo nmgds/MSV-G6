@@ -49,7 +49,7 @@ namespace automotive {
 
 		int sensorValues[6];
 
-		enum sensors{INFRARED_SIDE_1, INFRARED_BACK, INFRARED_SIDE_2, ULTRASOUND_FRONT, ULTRASOUND_SIDE, WHEEL_ENCODER};
+		enum sensors{ULTRASOUND_SIDE, ULTRASOUND_FRONT INFRARED_SIDE_1, INFRARED_SIDE_2, INFRARED_BACK, WHEEL_ENCODER};
 		
         ArduProxy::ArduProxy(const int32_t &argc, char **argv) :
             TimeTriggeredConferenceClientModule(argc, argv, "ardu-proxy"),
