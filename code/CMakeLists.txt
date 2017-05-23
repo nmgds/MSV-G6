@@ -51,7 +51,11 @@ add_subdirectory(perception)
 add_subdirectory(control)
 add_subdirectory(proxy)
 add_subdirectory(lanefollower)
+<<<<<<< HEAD
 add_subdirectory(overtaker)
+=======
+add_subdirectory(sidewaysparker)
+>>>>>>> master
 
 ###########################################################################
 # Enable CPack to create .deb and .rpm.

@@ -18,8 +18,8 @@
 #
 # GLOBAL CONFIGURATION
 #
-global.car = file://Car1.objx
-global.scenario = /sidewaysparker/ParkingLot.scnx
+global.car = file:///opt/configuration/Car1.objx
+global.scenario = file:///opt/configuration/OneBox.scnx
 global.showGrid = 0
 
 # Location of the origin of the reference frame (example: 57.70485804 N, 11.93831921 E)

@@ -60,7 +60,6 @@ namespace automotive {
 		int average_steering = 0;
 
 		int sensorValues[6];
-
 		const uint8_t sensorMask = 0x80;
 		const uint8_t ultrasoundMask = 0x40;
 		const uint8_t infraredMask = 0x60;
@@ -97,28 +96,28 @@ namespace automotive {
 			uint8_t number = s.at(1);
 			switch(mask){
 				case 0x01:
-					if(number <= 0 || number >= 45){
+					if(number <= 0 || number >= 55){
 						sensorValues[0] = -1;
 					}else{
 						sensorValues[0] = number;
 					}
 					break;
 				case 0x02:
-					if(number <= 0 || number >= 45){
+					if(number <= 0 || number >= 55){
 						sensorValues[1] = -1;
 					}else{
 						sensorValues[1] = number;
 					}
 					break;
 				case 0x04:
-					if(number <= 0 || number >= 30){
+					if(number <= 0 || number >= 20){
 						sensorValues[2] = -1;
 					}else{
 						sensorValues[2] = number;
 					}
 					break;
 				case 0x08:
-					if(number <= 0 || number >= 30){
+					if(number <= 0 || number >= 20){
 						sensorValues[3] = -1;
 					}else{
 						sensorValues[3] = number;
@@ -212,7 +211,7 @@ namespace automotive {
 			const uint32_t ONE_SECOND = 1000 * 1000;
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);
 			
-			serial->send(makeMovingCommand(desired_speed));
+			//serial->send(makeMovingCommand(desired_speed));
 			odcore::base::Thread::usleepFor(1*ONE_SECOND);			
 
 		while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
@@ -253,7 +252,7 @@ namespace automotive {
 					average_steering = -30;
 				}
 				serial->send(makeSteeringCommand(average_steering));
-				cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
+				//cout<<"     :Average steering:"<<average_steering<<" Steering value received:"<<steeringValue<<endl;
 				average_steering = 0;
 				counter = 0;
 			}
@@ -274,4 +273,3 @@ namespace automotive {
 
     }
 } // automotive::miniature
-

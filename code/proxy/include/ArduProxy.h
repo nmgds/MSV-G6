@@ -78,7 +78,7 @@ namespace automotive {
 
                 void distribute(odcore::data::Container c);
 
-		std::string makeSteeringCommand(int steering);
+        std::string makeSteeringCommand(int steering);
         std::string makeMovingCommand (int moving);
         automotive::miniature::SensorBoardData sensorBoardData;
         };

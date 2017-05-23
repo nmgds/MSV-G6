@@ -64,7 +64,6 @@ namespace automotive {
             m_eOld(0),
             m_vehicleControl() {}
             
-            
 
         LaneFollower::~LaneFollower() {}
 
@@ -113,6 +112,7 @@ namespace automotive {
 				        gray = cvCreateImage(cvSize(m_image->width, m_image->height), IPL_DEPTH_8U, 1);
 				        blur = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
 				        thresh = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
+
 			        }
 
 			        // Copying the image data is very expensive...
@@ -132,6 +132,7 @@ namespace automotive {
 						       //cvThreshold(gray, thresh, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
 						       cvSmooth(gray, blur, CV_GAUSSIAN, 9, 9, 10);
 						       cvAdaptiveThreshold(blur, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
+
 						   }
 			        }
 
@@ -150,43 +151,11 @@ namespace automotive {
             double e = 0;
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
-            const int32_t distance = 200;
-            
-            // Horizontal line detection on the track
-          
-				// line 1 (vertical) - Search from bottom to CONTROL_SCANLINE-100:
-				CvScalar pixelVertical;
-				CvPoint vertical;
-				vertical.y = -1;
-				vertical.x = thresh->width/2 - 100;
-				
-				for (int i = CONTROL_SCANLINE; i > CONTROL_SCANLINE - 100; i--) {
-					pixelVertical = cvGet2D(thresh, i, vertical.x);
-					if (pixelVertical.val[0] >= 200) {
-							vertical.y = i;
-							break;
-						}
-					}
-			
-					
-				// line 2 (diagonal) - Search from bottom to CONTROL_SCANLINE-100:
-				CvScalar pixelDiagonal;
-				CvPoint diagonal;
-				diagonal.y = -1;
-				diagonal.x = thresh->width/2 - 100;
-					
-				for (int i=CONTROL_SCANLINE; i > CONTROL_SCANLINE - 100; i--) {
-					pixelDiagonal = cvGet2D(thresh, i, diagonal.x);
-					if (pixelDiagonal.val[0] >= 200) {
-							diagonal.y = i;
-							break;
-						}
-					}
-					
+            const int32_t distance = 100;
+
             TimeStamp beforeImageProcessing;
             //for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
               for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
-
                 // Search from middle to the right:
                 CvScalar pixelRight;
                 CvPoint right;
@@ -211,10 +180,10 @@ namespace automotive {
                         left.x = x;
                         break;
                     }
-                }      
-                
+                }
+
                 if (m_debug) {
-                   if (left.x > 0) {
+                    if (left.x > 0) {
                     	CvScalar green = CV_RGB(0, 255, 0);
                     	cvLine(m_image, cvPoint(m_image->width/2, y), left, green, 1, 8);
 
@@ -222,8 +191,6 @@ namespace automotive {
                         sstr << (m_image->width/2 - left.x);
                     	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 - 100, y - 2), &m_font, green);
                     }
-                 
-                    
                     if (right.x > 0) {
                     	CvScalar red = CV_RGB(255, 0, 0);
                     	cvLine(m_image, cvPoint(m_image->width/2, y), right, red, 1, 8);
@@ -232,33 +199,11 @@ namespace automotive {
                         sstr << (right.x - m_image->width/2);
                     	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 + 100, y - 2), &m_font, red);
                     }
-                    
-                   // Draws the vertical lines detected in the lane in the m_image
-                   
-                   // line 1 (vertical)
-                    if (vertical.y > 0 && (y == CONTROL_SCANLINE)){
-                        CvScalar blue = CV_RGB(0,0, 255);
-                        cvLine(m_image, cvPoint(m_image->width / 2 - 100, y), vertical, blue, 3, 8);
+                } 
 
-                        stringstream sstr;
-                        sstr << ((m_image->height - 8) - vertical.y);
-                        cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 - 50, y - 100), &m_font, blue);
-
-                       }
-                       
-					//line 2 (diagonal)
-                    if (diagonal.y > 0 && (y == CONTROL_SCANLINE)){
-                         CvScalar purple = CV_RGB(122,0, 122);
-                         cvLine(m_image, cvPoint(m_image->width / 2 + 100, y), diagonal, purple, 3, 8);         
-
-                         stringstream sstr;
-                         sstr << ((m_image->height - 8) - diagonal.y);
-                         cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2, y - 100), &m_font, purple);
-                       }
-                   }
-                   
                 if (y == CONTROL_SCANLINE) {
 					
+
                     // Calculate the deviation error.
                     
                     if (right.x > 0) {
@@ -311,9 +256,6 @@ namespace automotive {
             else {
                 m_eSum += e;
             }
-
-            
-            
             //const double Kp = 2.5;
             //const double Ki = 8.5;
 //           const double Kd = 0;
@@ -389,9 +331,30 @@ namespace automotive {
 
             cvInitFont(&m_font, CV_FONT_HERSHEY_DUPLEX, hscale, vscale, shear, thickness, lineType);
 
- 
+            // Parameters for overtaking.
+            //const int32_t ULTRASONIC_FRONT_CENTER = 3;
+            //const int32_t ULTRASONIC_FRONT_RIGHT = 4;
+            //const int32_t INFRARED_FRONT_RIGHT = 0;
+            //const int32_t INFRARED_REAR_RIGHT = 2;
+
+            //const double OVERTAKING_DISTANCE = 5.5;
+            //const double HEADING_PARALLEL = 0.04;
+
             // Overall state machines for moving and measuring.
+            enum StateMachineMoving { FORWARD, TO_LEFT_LANE_LEFT_TURN, TO_LEFT_LANE_RIGHT_TURN, CONTINUE_ON_LEFT_LANE, TO_RIGHT_LANE_RIGHT_TURN, TO_RIGHT_LANE_LEFT_TURN };
+            enum StateMachineMeasuring { DISABLE, FIND_OBJECT_INIT, FIND_OBJECT, FIND_OBJECT_PLAUSIBLE, HAVE_BOTH_IR, HAVE_BOTH_IR_SAME_DISTANCE, END_OF_OBJECT };
             enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
+
+            //StateMachineMoving stageMoving = FORWARD;
+            //StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
+
+            // State counter for dynamically moving back to right lane.
+            //int32_t stageToRightLaneRightTurn = 0;
+            //int32_t stageToRightLaneLeftTurn = 0;
+
+            // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
+            //double distanceToObstacle = 0;
+            //double distanceToObstacleOld = 0;
 
             chalmersrevere::scaledcars::CarStatus cs;
             bool isActive = true;
