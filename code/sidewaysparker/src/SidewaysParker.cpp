@@ -108,7 +108,7 @@ namespace automotive {
 			// Global status of the car
 			enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
 
-			// Setting initial states
+			// Setting initial stages
             ParkingState stageMoving = GO_FORWARD;
 			MeasuringState stageMeasuring = START_MEASURING;
 			
