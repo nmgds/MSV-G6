@@ -30,3 +30,14 @@ message chalmersrevere.scaledcars.CarStatus [id = 806]{
 }
 
 
+
+message automotive.miniature.UserButtonData [id = 84] {
+    enum ButtonStatus {
+        UNDEFINED = -1,
+        RELEASED = 0,
+        PRESSED = 1,
+    };
+    ButtonStatus buttonStatus [id = 1];
+    double duration [id = 2];
+}
+
