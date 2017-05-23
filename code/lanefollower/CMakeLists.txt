@@ -70,12 +70,10 @@ find_package(ODVDScaledCarsDataModel REQUIRED)
 SET (LIBRARIES ${OPENDAVINCI_LIBRARIES} ${AUTOMOTIVEDATA_LIBRARIES} ${OPENCV_LIBRARIES})
 
 ###########################################################################
-<<<<<<< HEAD
-=======
+
 
 # Set header files from OpenCV.
 INCLUDE_DIRECTORIES (SYSTEM ${OpenCV_INCLUDE_DIR})
->>>>>>> master
 # Set header files from ODVDScaledCarsDataModel.
 INCLUDE_DIRECTORIES (SYSTEM ${ODVDSCALEDCARSDATAMODEL_INCLUDE_DIRS})
 # Set header files from OpenDaVINCI.
@@ -91,10 +89,6 @@ set(LIBRARIES ${OPENDAVINCI_LIBRARIES}
               ${ODVDSCALEDCARSDATAMODEL_LIBRARIES}
               ${OpenCV_LIBS})
 
-<<<<<<< HEAD
-=======
-
->>>>>>> master
 ###########################################################################
 # Build this project.
 FILE(GLOB_RECURSE thisproject-sources "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")

@@ -30,7 +30,7 @@ message chalmersrevere.scaledcars.CarStatus [id = 806]{
 }
 
 
-<<<<<<< HEAD
+
 message automotive.miniature.UserButtonData [id = 84] {
     enum ButtonStatus {
         UNDEFINED = -1,
@@ -40,5 +40,4 @@ message automotive.miniature.UserButtonData [id = 84] {
     ButtonStatus buttonStatus [id = 1];
     double duration [id = 2];
 }
-=======
->>>>>>> master
+
