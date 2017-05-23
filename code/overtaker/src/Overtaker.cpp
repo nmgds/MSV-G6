@@ -117,8 +117,9 @@ namespace automotive {
                     // 0. Going straight forward
                     if (movingStage == FORWARD) {
 
-                        cs.setStatus(OVERTAKING);
-                        vc.setSteeringWheelAngle(0);
+                        //cs.setStatus(OVERTAKING);
+                        //vc.setSteeringWheelAngle(0);
+                        cs.setStatus(LANE_FOLLOWING);
 
                     //1. Going left
                     }else if (movingStage == LEFT) {
