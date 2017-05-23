@@ -52,6 +52,10 @@ SET(AUTOMOTIVEDATA_DIR "${CMAKE_INSTALL_PREFIX}")
 FIND_PACKAGE (AutomotiveData REQUIRED)
 
 ###########################################################################
+# Find ODVDScaledCarsDataModel.
+find_package(ODVDScaledCarsDataModel REQUIRED)
+
+###########################################################################
 # Find OpenCV.
 SET(OPENCV_ROOT_DIR "/usr")
 FIND_PACKAGE (OpenCV REQUIRED)
@@ -66,6 +70,7 @@ find_package(ODVDScaledCarsDataModel REQUIRED)
 SET (LIBRARIES ${OPENDAVINCI_LIBRARIES} ${AUTOMOTIVEDATA_LIBRARIES} ${OPENCV_LIBRARIES})
 
 ###########################################################################
+
 
 # Set header files from OpenCV.
 INCLUDE_DIRECTORIES (SYSTEM ${OpenCV_INCLUDE_DIR})
@@ -83,7 +88,6 @@ set(LIBRARIES ${OPENDAVINCI_LIBRARIES}
               ${AUTOMOTIVEDATA_LIBRARIES}
               ${ODVDSCALEDCARSDATAMODEL_LIBRARIES}
               ${OpenCV_LIBS})
-
 
 ###########################################################################
 # Build this project.
@@ -134,3 +138,5 @@ INSTALL(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin COMPONENT scaledcars-sof
 INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION include/sidewaysparker COMPONENT scaledcars-software)
 
 
+# Install header files.
+INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION include/lanefollower COMPONENT scaledcars-software)
