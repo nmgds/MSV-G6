@@ -237,29 +237,6 @@ namespace automotive {
 					}
 				}
 				
-
-				//TODO: do we leave this? I would say delete it
-
-				/*
-				if(sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0 && stageMoving == GO_FORWARD){
-					freeSpaceCounter =  freeSpaceCounter + (encoderVal - lastEncoderValue); 
-				}else{
-					freeSpaceCounter = 0;
-				}
-				
-				if(freeSpaceCounter > GAP_SIZE && stageMoving == GO_FORWARD){
-					counter = 0;
-					encoderFixed = encoderVal;
-					stageMoving = READY_TO_PARK;
-					cs.setStatus(PARKING);
-				}
-				
-				
-				lastEncoderValue = encoderVal;
-				*/
-				
-				
-				
 				
                 // Measuring state machine.
                 switch (stageMeasuring) {
@@ -307,26 +284,13 @@ namespace automotive {
                     break;
                 }
 				
-				// TODO: check if this is really ok
+				// Don't send vehicle controls while lanefollowing
 				if(stageMoving!=GO_FORWARD){
-					// Create container for finally sending the data.
 					Container c(vc);
-					// Send container.
 					getConference().send(c);
 				}
 
-                // TODO: check if this is right, I think we check these things above in states
-                // 			also I think we should just leave those two lines after else 
-				if(stageMoving == GO_FORWARD){
-					cs.setStatus(LANE_FOLLOWING);
-				}
-				else if(stageMoving == READY_TO_PARK){
-					//do nothing
-				}
-				else{
-					cs.setStatus(PARKING);
-				}
-				// These
+                // Update vehicle state
                 Container cont(cs);
                 getConference().send(cont);
 
