@@ -64,6 +64,7 @@ namespace automotive {
             m_eOld(0),
             m_vehicleControl() {}
             
+            
 
         LaneFollower::~LaneFollower() {}
 
@@ -112,7 +113,6 @@ namespace automotive {
 				        gray = cvCreateImage(cvSize(m_image->width, m_image->height), IPL_DEPTH_8U, 1);
 				        blur = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
 				        thresh = cvCreateImage(cvSize(gray->width, gray->height), IPL_DEPTH_8U, 1);
-
 			        }
 
 			        // Copying the image data is very expensive...
@@ -130,9 +130,9 @@ namespace automotive {
 						       // Gaussian threshold on gray
 						       //cvAdaptiveThreshold(gray, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
 						       //cvThreshold(gray, thresh, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+						      
 						       cvSmooth(gray, blur, CV_GAUSSIAN, 9, 9, 10);
 						       cvAdaptiveThreshold(blur, thresh, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY_INV,51,15);
-
 						   }
 			        }
 
@@ -151,11 +151,12 @@ namespace automotive {
             double e = 0;
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
-            const int32_t distance = 231;
+            const int32_t distance = 200;
 
             TimeStamp beforeImageProcessing;
-            //for(int32_t y = thresh->height - 8; y > thresh->height * .6; y -= 10) {
+            // Scan lines set a bit higher than default .60
               for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
+
                 // Search from middle to the right:
                 CvScalar pixelRight;
                 CvPoint right;
@@ -180,10 +181,10 @@ namespace automotive {
                         left.x = x;
                         break;
                     }
-                }
-
+                }      
+                
                 if (m_debug) {
-                    if (left.x > 0) {
+                   if (left.x > 0) {
                     	CvScalar green = CV_RGB(0, 255, 0);
                     	cvLine(m_image, cvPoint(m_image->width/2, y), left, green, 1, 8);
 
@@ -191,6 +192,8 @@ namespace automotive {
                         sstr << (m_image->width/2 - left.x);
                     	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 - 100, y - 2), &m_font, green);
                     }
+                 
+                    
                     if (right.x > 0) {
                     	CvScalar red = CV_RGB(255, 0, 0);
                     	cvLine(m_image, cvPoint(m_image->width/2, y), right, red, 1, 8);
@@ -199,11 +202,10 @@ namespace automotive {
                         sstr << (right.x - m_image->width/2);
                     	cvPutText(m_image, sstr.str().c_str(), cvPoint(m_image->width/2 + 100, y - 2), &m_font, red);
                     }
-                } 
-
+                   }
+                   
                 if (y == CONTROL_SCANLINE) {
 					
-
                     // Calculate the deviation error.
                     
                     if (right.x > 0) {
@@ -256,28 +258,6 @@ namespace automotive {
             else {
                 m_eSum += e;
             }
-            //const double Kp = 2.5;
-            //const double Ki = 8.5;
-//           const double Kd = 0;
-
-            // The following values have been determined by Twiddle algorithm.
-			/*
-            const double Kp = 0.4482626884328734;
-            const double Ki = 3.103197570937628;
-            const double Kd = 0.030450210485408566;
-            */
-          //  const double Kp = 1.193434;
-          //  const double Ki = 0.090000;
-          //  const double Kd = 0.160000;
-          
-           // const double Kp = 0.440;
-           // const double Ki = 3.11;
-           // const double Kd = 0.003;
-		   
-		    //const double Kp = 1.009;
-            //const double Ki = 0.0123123;
-			//const double Kd = 0.00;
-
 	
 			// Get PID data from configuration file
 		    KeyValueConfiguration kva = getKeyValueConfiguration(); 
@@ -331,30 +311,9 @@ namespace automotive {
 
             cvInitFont(&m_font, CV_FONT_HERSHEY_DUPLEX, hscale, vscale, shear, thickness, lineType);
 
-            // Parameters for overtaking.
-            //const int32_t ULTRASONIC_FRONT_CENTER = 3;
-            //const int32_t ULTRASONIC_FRONT_RIGHT = 4;
-            //const int32_t INFRARED_FRONT_RIGHT = 0;
-            //const int32_t INFRARED_REAR_RIGHT = 2;
-
-            //const double OVERTAKING_DISTANCE = 5.5;
-            //const double HEADING_PARALLEL = 0.04;
-
+ 
             // Overall state machines for moving and measuring.
-            enum StateMachineMoving { FORWARD, TO_LEFT_LANE_LEFT_TURN, TO_LEFT_LANE_RIGHT_TURN, CONTINUE_ON_LEFT_LANE, TO_RIGHT_LANE_RIGHT_TURN, TO_RIGHT_LANE_LEFT_TURN };
-            enum StateMachineMeasuring { DISABLE, FIND_OBJECT_INIT, FIND_OBJECT, FIND_OBJECT_PLAUSIBLE, HAVE_BOTH_IR, HAVE_BOTH_IR_SAME_DISTANCE, END_OF_OBJECT };
             enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
-
-            //StateMachineMoving stageMoving = FORWARD;
-            //StateMachineMeasuring stageMeasuring = FIND_OBJECT_INIT;
-
-            // State counter for dynamically moving back to right lane.
-            //int32_t stageToRightLaneRightTurn = 0;
-            //int32_t stageToRightLaneLeftTurn = 0;
-
-            // Distance variables to ensure we are overtaking only stationary or slowly driving obstacles.
-            //double distanceToObstacle = 0;
-            //double distanceToObstacleOld = 0;
 
             chalmersrevere::scaledcars::CarStatus cs;
             bool isActive = true;
