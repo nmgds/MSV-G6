@@ -1,0 +1,32 @@
+version: '2'
+# Please note that docker-compose does not prescribe a startup order
+
+services:
+    #odsupercomponent
+    odsupercomponent:
+        image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+        network_mode: "host"
+        working_dir: /opt/recordings
+        volumes:
+            - .:/opt/configuration
+        command: "/opt/od4/bin/odsupercomponent --cid=${CID} --verbose=1 --configuration=/opt/configuration/configuration"
+        
+    #odcockpit
+    odcockpit:
+        image: seresearch/scaledcars-on-opendlv-on-opendlv-core-on-opendavinci-on-base
+        network_mode: "host"
+        environment:
+        - DISPLAY=$DISPLAY
+        working_dir: /opt/recordings
+        volumes:
+        - /tmp/.X11-unix:/tmp/.X11-unix
+        - ./recordings:/opt/recordings
+        ipc: host
+        user: odv
+        depends_on:
+            - odsupercomponent
+        command: "/opt/od4/bin/odcockpit --cid=${CID}"
+        
+
+        
+
