@@ -152,7 +152,7 @@ namespace automotive {
 
             const int32_t CONTROL_SCANLINE = 462; // 462 calibrated length to right: 280px
             const int32_t distance = 200;
-					
+
             TimeStamp beforeImageProcessing;
             // Scan lines set a bit higher than default .60
               for(int32_t y = thresh->height - 8; y > thresh->height * .65; y -= 10) {
@@ -364,4 +364,5 @@ namespace automotive {
 
     }
 } // automotive::miniature
+
 

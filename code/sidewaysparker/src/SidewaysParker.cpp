@@ -57,191 +57,187 @@ namespace automotive {
         // This method will do the main data processing job.
         odcore::data::dmcp::ModuleExitCodeMessage::ModuleExitCode SidewaysParker::body() {
 
+            // Sensors
             const double IR_RIGHT_FRONT = 2;
-           //const double IR_RIGHT_BACK = 3;
-			//const double IR_BACK = 4;
+           	const double IR_RIGHT_BACK = 3;
             const double WHEEL_ENCODER = 5;
-			/*
+			
+            // Save IR value for comparison later
             double distanceOld = 0;
+            // Starting value of the gap
             double absPathStart = 0;
+            // End value of the gap
             double absPathEnd = 0;
-			*/
 			
-
+			
+            // Load values form the configuration
 			KeyValueConfiguration kv = getKeyValueConfiguration();
-			//const int speedForward = kv.getValue<int32_t>("proxy-camera.camera.width");
+			// Default speed for moving forward
 			const int speedForward = kv.getValue<int32_t>("sidewaysparker.speedForward");
+			// Default speed for moving backward
 			const int speedBackward = kv.getValue<int32_t>("sidewaysparker.speedBack");
-			const int COUNTER_MAX = kv.getValue<int32_t>("sidewaysparker.timer");
+			// Pause after the gap was found and the car has moved a certain amount forward
+			const int COUNTER1_MAX = kv.getValue<int32_t>("sidewaysparker.timer1");
+			// Pause between turns while backing up
+			const int COUNTER2_MAX = kv.getValue<int32_t>("sidewaysparker.timer2");
+			// Minimal gap size
 			const int GAP_SIZE = kv.getValue<int32_t>("sidewaysparker.gapSize");
+			// Distance to move while backing up and turning right
 			const int FIRST_TURN = kv.getValue<int32_t>("sidewaysparker.firstTurn");
+			// Distance to move while backing up and turning left
 			const int SECOND_TURN = kv.getValue<int32_t>("sidewaysparker.secondTurn");
-			const int TRANSITION_VALUE = kv.getValue<int32_t>("sidewaysparker.transition");
-			//const int STARTING_STAGE = kv.getValue<int32_t>("sidewaysparker.startstage");
+			// Distance to move forward after the end of the gap
+			const int READY_TO_PARK_DISTANCE = kv.getValue<int32_t>("sidewaysparker.readydistance");
+			// Speed value for stopping the car when moving backward
+			const int STOP_BACKWARD = kv.getValue<int32_t>("sidewaysparker.stopBackward");
+			// Speed value for stopping the car when moving forward
+			const int STOP_FORWARD = kv.getValue<int32_t>("sidewaysparker.stopForward");
+
 			
+			// For counting the lenght of the pause
 			int counter = 0;
-			int startParking = 0;
-			
-			
-			
-			int lastEncoderValue = 0;
-			int freeSpaceCounter = 0;
-			
-			enum ParkingState {START, GO_FORWARD, READY_TO_PARK, TURN_RIGHT, WAITING_ONE, TRANSITION, WAITING_TWO, TURN_LEFT, STOP};
+			// Current value of the encoder
+			int encoderVal = 0;
+			// Saved value of the encoder to be used when counting the distance travelled
+			int encoderFixed = 0;
+
+			// States for movement
+			enum ParkingState {START, GO_FORWARD, PREPARE_TO_PARK, READY_TO_PARK, TURN_RIGHT, WAITING, TURN_LEFT, STOP};
+			// States for measuring
 			enum MeasuringState {START_MEASURING, GAP_BEGIN, GAP_END};
+			// Global status of the car
 			enum carStatus { LANE_FOLLOWING = 0, OVERTAKING = 1,PARKING = 2};
-			
+
+			// Setting initial stages
             ParkingState stageMoving = GO_FORWARD;
-			//MeasuringState stageMeasuring = START_MEASURING;
+			MeasuringState stageMeasuring = START_MEASURING;
 			
-			
-			uint8_t encoderVal = 0;
-			
-			
-			
+				
 
             while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
 				
-                // 1. Get most recent vehicle data:
+                // Get most recent vehicle data:
                 Container containerVehicleData = getKeyValueDataStore().get(automotive::VehicleData::ID());
                 VehicleData vd = containerVehicleData.getData<VehicleData> ();
-				//encoderVal = vd.getAbsTraveledPath();
 				
-                // 2. Get most recent sensor board data:
+                // Get most recent sensor board data:
                 Container containerSensorBoardData = getKeyValueDataStore().get(automotive::miniature::SensorBoardData::ID());
                 SensorBoardData sbd = containerSensorBoardData.getData<SensorBoardData> ();
 
-                cout << "0: " << sbd.getValueForKey_MapOfDistances(0) << endl;
-                cout << "1: " << sbd.getValueForKey_MapOfDistances(1) << endl;
-                cout << "2: " << sbd.getValueForKey_MapOfDistances(2) << endl;
-                cout << "3: " << sbd.getValueForKey_MapOfDistances(3) << endl;
-                cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
-                cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
-				cout << "State: " << stageMoving << endl;
+
+                // Printouts for debugging 
+				// cout << "0: " << sbd.getValueForKey_MapOfDistances(0) << endl;
+				// cout << "1: " << sbd.getValueForKey_MapOfDistances(1) << endl;
+				// cout << "2: " << sbd.getValueForKey_MapOfDistances(2) << endl;
+				// cout << "3: " << sbd.getValueForKey_MapOfDistances(3) << endl;
+				// cout << "4: " << sbd.getValueForKey_MapOfDistances(4) << endl;
+				// cout << "5: " << sbd.getValueForKey_MapOfDistances(5) << endl;
+				// cout << "State: " << stageMoving << endl;
+				// cout << "SpeedFwd: " << speedForward << endl;
+
 
                 // Create vehicle control data.
                 VehicleControl vc;
-
                 // Create vehicle status
                 chalmersrevere::scaledcars::CarStatus cs;
-
-
           
-				int readyToPark = 0;
+				// Get current absolute path travelled
 				encoderVal = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
-                //int start = 0;
-
                 // Moving state machine.
-                
-				// if(stageMoving == START){
-				// 	//vc.setSteeringWheelAngle(0);
-				// 	//vc.setSpeed(speedForward);
-				// 	cs.setStatus(LANE_FOLLOWING);
-				// 	// if(encoderVal > 2){
-				// 	// 	stageMoving = GO_FORWARD;
-				// 	// }
-				// }
-				if(stageMoving == GO_FORWARD){
-					// vc.setSteeringWheelAngle(0);
-					// vc.setSpeed(speedForward);
-
-				}
-				if(stageMoving == READY_TO_PARK){
-					if(encoderVal - readyToPark > 8){
-						vc.setSpeed(speedBackward + 2);
-						vc.setSteeringWheelAngle(30);
-						counter++;
-						if(counter > COUNTER_MAX){
-							stageMoving = TURN_RIGHT;
-							counter = 0;
-							startParking = encoderVal;
-						}
-						
+                	
+				// Get the car moving and give control to the lanefollower
+				if(stageMoving == START){
+					vc.setSteeringWheelAngle(0);
+					vc.setSpeed(speedForward+1);
+					cs.setStatus(LANE_FOLLOWING);
+					if(encoderVal > 2){
+					stageMoving = GO_FORWARD;
 					}
 				}
+				
+				if(stageMoving == GO_FORWARD){
+
+					 vc.setSteeringWheelAngle(0);
+					 vc.setSpeed(speedForward);
+				}
+
+				// When proper gap is detected and side back IR detects the end of the gap go to next stage
+				if(stageMoving == PREPARE_TO_PARK){
+					vc.setSpeed(speedForward);
+					if(sbd.getValueForKey_MapOfDistances(IR_RIGHT_BACK)>0){
+						encoderFixed = encoderVal;
+						stageMoving = READY_TO_PARK;
+					}
+				
+				}
+				
+				// Car goes forwared for set amount of distance to be a little bit ahead of the gap
+				// Get back control form the lanefollower
+				// Prepare the wheels for backing up by turning them right
+				// Pause for a set amount and switch to next stage
+				if(stageMoving == READY_TO_PARK){
+					vc.setSpeed(speedForward);
+					if(encoderVal - encoderFixed >= READY_TO_PARK_DISTANCE){
+						cs.setStatus(PARKING);
+						vc.setSpeed(STOP_FORWARD); //STOP
+						vc.setSteeringWheelAngle(30); //turn your wheels before going backwards (for the encoder)
+						counter++;
+						if(counter > COUNTER1_MAX){
+							stageMoving = TURN_RIGHT;
+							counter = 0;
+							encoderFixed = encoderVal;
+						}
+					}
+				}
+				
+				// Go backward for a set distance while wheels are turned left
 				if(stageMoving == TURN_RIGHT){
 					vc.setSteeringWheelAngle(30);
 					vc.setSpeed(speedBackward);
-					counter++;
-					if(encoderVal - startParking > FIRST_TURN){
-					//if(counter > COUNTER_MAX){
-						stageMoving = WAITING_ONE;
-						startParking = encoderVal;
+					if(encoderVal - encoderFixed > FIRST_TURN){
+						stageMoving = WAITING;
+						encoderFixed = encoderVal; //Restart position
 						counter = 0;
 					}
 				}
-				if(stageMoving == WAITING_ONE){
+
+				// Pause for a set amount and prepare wheels turning left
+				if(stageMoving == WAITING){
 					counter++;
-					vc.setSpeed((speedForward / 2) + 1);
-					startParking = encoderVal;
-					if(counter > COUNTER_MAX){
+					vc.setSpeed(STOP_BACKWARD); //STOP
+					vc.setSteeringWheelAngle(-30);
+					if(counter > COUNTER2_MAX){
+						vc.setSpeed(0);
 						counter = 0;
+						encoderFixed = encoderVal; //Restart position
 						stageMoving = TURN_LEFT;
 					}
 				}
-				if(stageMoving == TRANSITION){
-					vc.setSpeed(speedBackward);
-					vc.setSteeringWheelAngle(0);
-					if(encoderVal - startParking > TRANSITION_VALUE){
-						startParking = encoderVal;
-						counter = 0;
-						stageMoving = WAITING_TWO;
-					}
-				}
-				if(stageMoving == WAITING_TWO){
-					counter++;
-					vc.setSpeed((speedForward / 2) + 1);
-					startParking = encoderVal;
-					if(counter > COUNTER_MAX){
-						counter = 0;
-						stageMoving = TURN_LEFT;
-					}
-				}
+
+				// Go backward for a set istance while wheels are turned left
 				if(stageMoving == TURN_LEFT){
 					vc.setSteeringWheelAngle(-30);
-					vc.setSpeed(speedBackward);
-					counter++;
-					if(encoderVal - startParking > SECOND_TURN){
-					  //if(counter > 40){
+					vc.setSpeed(speedBackward);					
+					
+					if(encoderVal - encoderFixed > SECOND_TURN){
+						vc.setSpeed(STOP_BACKWARD); //STOP
 						stageMoving = STOP;
+						counter = 0;
 					}
-					
-					
-			//		if((sbd.getValueForKey_MapOfDistances(IR_BACK) > 0 && sbd.getValueForKey_MapOfDistances(IR_BACK) < 15) ){
-//						vc.setSteeringWheelAngle(0);
-//						vc.setSpeed(5);
-//						startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
-				//		stageMoving = STOP;
-					//}
-					
-					
 				}
+				
+				// Stop the car
 				if(stageMoving == STOP){
-					vc.setSteeringWheelAngle(0);
-					vc.setSpeed(0);
-				}
-				
-				if(sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0 && stageMoving == GO_FORWARD){
-					freeSpaceCounter =  freeSpaceCounter + (encoderVal - lastEncoderValue); 
-				}else{
-					freeSpaceCounter = 0;
-				}
-				
-				if(freeSpaceCounter > GAP_SIZE && stageMoving == GO_FORWARD){
-					counter = 0;
-					readyToPark = encoderVal;
-					stageMoving = READY_TO_PARK;
-					cs.setStatus(PARKING);
+					counter++;
+					vc.setSpeed(STOP_BACKWARD); //STOP
+					if(counter > COUNTER1_MAX){
+						vc.setSteeringWheelAngle(0);
+						vc.setSpeed(0);
+					}
 				}
 				
 				
-				lastEncoderValue = encoderVal;
-				
-				
-				
-				
-				/*
                 // Measuring state machine.
                 switch (stageMeasuring) {
                     case START_MEASURING:
@@ -252,7 +248,10 @@ namespace automotive {
                         }
                     break;
                     case GAP_BEGIN:
-                        {
+                        {	
+                        	// Keep updating front right IR values
+                        	// When car passes the object andd sees a free space, go to next stage to
+                        	// start counting the gap size
                             if ((distanceOld > 0) && (sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) < 0)) {
                                 stageMeasuring = GAP_END;
                                 absPathStart = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
@@ -262,40 +261,36 @@ namespace automotive {
                     break;
                     case GAP_END:
                         {
-                            // Checking for sequence -, +.
+                            // Keep counting free space
+                            // If an object detected - measure length of free space
                             if ((distanceOld < 0) && (sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT) > 0)) {
-                                // Found sequence -, +.
+                                
                                 stageMeasuring = GAP_BEGIN;
                                 absPathEnd = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
 
-                                const double GAP_SIZE = (absPathEnd - absPathStart);
+                                const double GAP = (absPathEnd - absPathStart);
 
-                                cerr << "Size = " << GAP_SIZE << endl;
+                                cerr << "Size = " << GAP << endl;
 
-                                if (stageMoving == GO_FORWARD && (GAP_SIZE > 4)) {
-                                    stageMoving = READY_TO_PARK;
-									startParking = sbd.getValueForKey_MapOfDistances(WHEEL_ENCODER);
+                                // If gap size matches minimal set gap size and car is GO_FORWARD state
+                                // set moving stage to prepare for parking procedure 
+                                if (stageMoving == GO_FORWARD && (GAP >= GAP_SIZE)) {
+                                    stageMoving = PREPARE_TO_PARK;
+									counter = 0;
                                }
                             }
                             distanceOld = sbd.getValueForKey_MapOfDistances(IR_RIGHT_FRONT);
                         }
                     break;
                 }
-				*/
 				
-				
-                // Create container for finally sending the data.
-                Container c(vc);
-                // Send container.
-                getConference().send(c);
+				// Don't send vehicle controls while lanefollowing
+				if(stageMoving!=GO_FORWARD){
+					Container c(vc);
+					getConference().send(c);
+				}
 
-                // Try to send car status
-				if(stageMoving == GO_FORWARD){
-					cs.setStatus(LANE_FOLLOWING);
-				}
-				else{
-					cs.setStatus(PARKING);
-				}
+                // Update vehicle state
                 Container cont(cs);
                 getConference().send(cont);
 
@@ -306,3 +301,4 @@ namespace automotive {
         }
     }
 } // automotive::miniature
+
