@@ -81,6 +81,8 @@ namespace automotive {
 
                 //turnStart used with wheelEncoder value to make the car turn a certain amount to the desired direction.
                 double turnStart = 0;
+                double turnEnd = 0;
+                double leftTurnDistance = 0;
 
                 while (getModuleStateAndWaitForRemainingTimeInTimeslice() == odcore::data::dmcp::ModuleStateMessage::RUNNING) {
                      // 1. Get most recent vehicle data:
@@ -128,11 +130,14 @@ namespace automotive {
                         vc.setSteeringWheelAngle(-0.5);
                         cerr <<"LEFT:Angle steering -1" << endl;
 
-                        //set turnStart to bigger than wheelEncoders value for the next state
-                        turnStart = wheelEncoder + 5;
                         
                         //Change to LEFT_RIGHT when both infrared sensors see something
                         if (irFront > 0 && irRear > 0 ){ 
+                        	 //set turnEnd to wheelEncoders to save distance when turn ended
+                        	turnEnd = wheelEncoder;
+                        	// remember distance that was turned to the left lane
+                        	leftTurnDistance = wheelEncoder - turnStart;
+
                             movingStage = LEFT_RIGHT;        
                         }
 
@@ -142,8 +147,8 @@ namespace automotive {
                         vc.setSpeed(3);
                         vc.setSteeringWheelAngle(0.5);
 
-                        //When the wheelEncoder value is bigger than turnStart change to next state
-                        if(wheelEncoder > turnStart){
+                        //When the car has turned right the same amount that it turned left, it is driving straight 
+                        if((wheelEncoder - turnEnd) > (leftTurnDistance - 1)){
                             movingStage = CONTINUE_ON_LEFT_LANE;
                         }
                     
@@ -152,11 +157,12 @@ namespace automotive {
                         cs.setStatus(OVERTAKING);
                         vc.setSteeringWheelAngle(0);
                         vc.setSpeed(3);
-                        //set turnStart to bigger than wheelEncoders value for the next state
-                        turnStart = wheelEncoder + 5;
 
                         //When the Front infrared doesn't see anything, but the rear one does, start going back to right lane.
                         if(irRear > 0 && irFront < 0) {
+                        	//set turnStart wheelEncoder value when beginning right turn
+                        	turnStart = wheelEncoder;
+
                             movingStage = RIGHT;
                         }
 
@@ -168,9 +174,9 @@ namespace automotive {
                         cerr <<"RIGHT:Angle steering to right" << endl;
 
                         //When the wheelEncoder value is bigger than turnStart change to next state
-                        if(wheelEncoder > turnStart){
-                            //set turnStart to bigger than wheelEncoders value for the next state
-                            turnStart = wheelEncoder + 2;
+                        if((wheelEncoder - turnStart) > (leftTurnDistance - 1)){
+                        	// remember wheel encoder when we stopped turning right and began turning left in right lane
+                            turnEnd = wheelEncoder;
                             movingStage = RIGHT_LEFT;
                             }       
                     
@@ -180,8 +186,8 @@ namespace automotive {
                         vc.setSpeed(3);
                         vc.setSteeringWheelAngle(-1);
 
-                        //When the wheelEncoder value is bigger than turnStart change to back to FORWARD
-                        if(wheelEncoder > turnStart){
+                        // Stop turning left and return control to Lane Follower when we have turned left in right lane the same distance as we turned right to get into the lane
+                        if((wheelEncoder - turnEnd) > (leftTurnDistance - 1)){
                             cerr << "Again at the beginning" << endl;
                             objectStatus = FIND_OBJECT_INIT;
                             movingStage = FORWARD;
@@ -209,6 +215,9 @@ namespace automotive {
 
                     }else if (objectStatus == FOUND_OBJECT) { // check if we have to overtake this object.
                         if (usFront <= OVERTAKING_DISTANCE || usRight > 0) {
+                        	// save distance of turn start into turnStart variable
+                        	turnStart = wheelEncoder;
+
                             movingStage = LEFT;
                             // Disable measuring until requested from moving state machine again.
                             objectStatus = DISABLE;
